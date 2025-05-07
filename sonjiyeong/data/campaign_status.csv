@@ -1,0 +1,6 @@
+campaign_status_id,status_name
+1,예정
+2,진행중
+3,완료
+4,홀드
+5,취소
