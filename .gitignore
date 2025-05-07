@@ -1,0 +1,11 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# VSCode settings (선택)
+.vscode/
+
+# 기타 시스템 파일
+.DS_Store
+Thumbs.db

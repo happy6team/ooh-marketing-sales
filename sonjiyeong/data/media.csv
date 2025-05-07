@@ -1,0 +1,38 @@
+media_id,media_name,location,specification,slot_count,media_type,operating_hours,guaranteed_exposure,duration_seconds,quantity,unit_price,features,image_day_url,image_night_url,image_map_url
+1,강남대로 논현사거리 국전빌딩,서울시 서초구 강남대로 543,13m x 8m,24,옥상형 가로 사이니지,06:00~24:00,0,15,1,7000000.00,유동인구일 17만명 월 소득 500만원 중후반 직장인 밀집,/images/media/1/day.jpg,/images/media/1/night.jpg,/images/media/1/map.jpg
+2,서울 고속버스터미널 (경부선),서울시 서초구 신반포로 194,20m x 11m,24,옥상형 가로 사이니지,06:00~24:00,0,15,1,7000000.00,유동인구 일 36만명 서울 교통 중심지역 관광객 유입,/images/media/2/day.jpg,/images/media/2/night.jpg,/images/media/2/map.jpg
+3,삼성역 루첸타워,서울시 강남구 테헤란로 510,11m x 20m,24,벽면형 세로 사이니지,06:00~24:00,0,15,1,15000000.00,지하철 승차객일 5.5만명 현대백화점 코엑스 인근,/images/media/3/day.jpg,/images/media/3/night.jpg,/images/media/3/map.jpg
+4,잠실역 유토피아,서울시 송파구 올림픽로 240,12.5m x 15.5m,24,벽면형 세로 사이니지,06:00~24:00,0,15,1,12000000.00,거주인구 29만명 유동인구 일 20만명 롯데월드타워 인근,/images/media/4/day.jpg,/images/media/4/night.jpg,/images/media/4/map.jpg
+5,광화문 청계광장 청계주차타워,서울시 종로구 종로 10-7,12m x 18.6m,24,벽면형 세로 사이니지,06:00~24:00,0,15,1,15000000.00,유동인구일 28만명 도심 관광지 위치 3040 직장인 밀집,/images/media/5/day.jpg,/images/media/5/night.jpg,/images/media/5/map.jpg
+6,광화문 청계광장 청계한국빌딩,서울시 종로구 서린동 149,13m x 17.3m,24,벽면형 세로 사이니지,06:00~24:00,0,15,1,15000000.00,유동인구일 28만명 도심 관광지 위치 3040 직장인 밀집,/images/media/6/day.jpg,/images/media/6/night.jpg,/images/media/6/map.jpg
+7,광화문 적선 현대빌딩,서울시 종로구 사직로 130,19m x 10m,24,옥상형 가로 사이니지,06:00~24:00,0,15,1,7000000.00,직장인구 19만명 관광및 정부 기관 밀집 지역 경복궁 인근,/images/media/7/day.jpg,/images/media/7/night.jpg,/images/media/7/map.jpg
+8,서울역 부양빌딩,서울시 용산구 동자동 43-74,10.8m x 19m,24,벽면형 가로 사이니지,06:00~24:00,0,15,1,15000000.00,교통 중심지 덕수궁 남산타워 등 관광지 인근 KTX 환승센터,/images/media/8/day.jpg,/images/media/8/night.jpg,/images/media/8/map.jpg
+9,시청앞 재능교육빌딩,서울시 중구 을지로1가 192-11,13.4m x 8.4m,24,옥상형 가로 사이니지,06:00~24:00,0,15,1,5000000.00,유동인구 17만명 월 소득 500만원 중후반 CBD 권역,/images/media/9/day.jpg,/images/media/9/night.jpg,/images/media/9/map.jpg
+10,강서구청사거리 귀뚜라미 사옥,서울시 강서구 공항대로 396,16m x 9m,24,가로 벽면형 사이니지,06:00~24:00,0,15,1,7000000.00,주거인구 19만명 교차로 코너 건물 가시거리 우수,/images/media/10/day.jpg,/images/media/10/night.jpg,/images/media/10/map.jpg
+11,김포공항 동아빌딩,서울시 강서구 개화동로 565,8.4m x 4.8m,24,벽면형 가로 사이니지,06:00~24:00,0,15,1,5000000.00,김포공항 여객 수 월평균 약 185만명 공항 진입로 앞 교차로,/images/media/11/day.jpg,/images/media/11/night.jpg,/images/media/11/map.jpg
+12,분당 페퍼저축은행,경기도 성남시 분당구 황새울로 340,23.7m x 8.3m,24,벽면형 세로 사이니지,06:00~24:00,0,15,1,12000000.00,유동인구 일 23만명 지하철 승차객 일 2.4만명 커브드형 전광판,/images/media/12/day.jpg,/images/media/12/night.jpg,/images/media/12/map.jpg
+13,제주 노형오거리,제주시 도령도 1,12m x 7.5m,24,옥상형 가로 사이니지,06:00~24:00,0,15,1,7000000.00,월 120만명 여행객 제주시 중심 지역 공항 인접,/images/media/13/day.jpg,/images/media/13/night.jpg,/images/media/13/map.jpg
+14,부산 중앙역 금진빌딩,부산시 중구 중앙대로 11,12m x 8m,24,벽면형 가로 사이니지,06:00~24:00,0,15,1,5000000.00,유동인구 17만명 월 소득 500만원 중후반 부산 중심상권,/images/media/14/day.jpg,/images/media/14/night.jpg,/images/media/14/map.jpg
+15,대구 죽전사거리 윤암빌딩,대구시 달서구 감삼동 146-30,14m x 8m,24,옥상형 가로 사이니지,06:00~24:00,0,15,1,5000000.00,10차선 차도가 있는 달구벌대로 대로변 위치 두류공원 인근,/images/media/15/day.jpg,/images/media/15/night.jpg,/images/media/15/map.jpg
+16,홍대입구역 스칼렛 전광판,서울시 마포구 양화로 148,12.8m x 16.6m,24,벽면형 세로 사이니지,06:00~24:00,0,15,1,15000000.00,28개 정류장 쇼핑/유흥/대학 등 상권 발달 2030 젊은층 중심,/images/media/16/day.jpg,/images/media/16/night.jpg,/images/media/16/map.jpg
+17,이대사거리 중앙빌딩,서울시 마포구 신촌로 176,15m x 8m,24,옥상형 가로 사이니지,06:00~24:00,0,15,1,7000000.00,이화여자대학 연세대학 서강대학등 대학 상권 1020 여성층,/images/media/17/day.jpg,/images/media/17/night.jpg,/images/media/17/map.jpg
+18,N.square 강남대로,서울시 강남구 강남대로 390,15m x 9m,24,지하철 광고 사이니지,06:00~22:00,0,15,1,4500000.00,서울 핵심 상권의 중심지에 위치한 지하철 디지털 사이니지,/images/media/18/day.jpg,/images/media/18/night.jpg,/images/media/18/map.jpg
+19,지하철 6호선 연신내역,서울시 은평구 통일로 747,8m x 6m,20,지하철 스크린도어 광고,05:30~24:00,0,15,1,3000000.00,일평균 승하차 인원 6.8만명 강북 주요 환승역,/images/media/19/day.jpg,/images/media/19/night.jpg,/images/media/19/map.jpg
+20,신분당선 강남역,서울시 서초구 서초대로 370,9m x 5m,30,지하철 스크린도어 광고,05:30~01:00,0,15,1,3500000.00,일평균 승하차 인원 12만명 비즈니스 중심지,/images/media/20/day.jpg,/images/media/20/night.jpg,/images/media/20/map.jpg
+21,가로변 버스쉘터 강남대로,서울시 강남구 강남대로 일대,5m x 2.5m,50,버스정류장 쉘터 광고,24:00~24:00,0,15,1,300000.00,서울 전 지역 2100여 기 설치 생활밀착형 매체,/images/media/21/day.jpg,/images/media/21/night.jpg,/images/media/21/map.jpg
+22,디지털 버스쉘터 종로,서울시 종로구 종로 일대,3m x 1.8m,40,버스정류장 디지털 광고,06:00~24:00,0,15,1,800000.00,서울 주요 40개 정류장 디지털 디스플레이 설치,/images/media/22/day.jpg,/images/media/22/night.jpg,/images/media/22/map.jpg
+23,빅사이트 전광판 강남대로,서울시 강남구 강남대로 일대,11.24m x 19.98m,20,빌딩 외벽 전광판,06:00~00:00,0,20,1,1500000.00,유동인구 일 150회 이상 노출 코너 위치 주목도 높음,/images/media/23/day.jpg,/images/media/23/night.jpg,/images/media/23/map.jpg
+24,현대백화점 그룹 전광판,서울시 강남구 테헤란로 98길 12,13m x 7m,20,백화점 외벽 전광판,10:30~20:00,0,15,1,1200000.00,백화점 쇼핑객 대상 고소득층 타겟팅 가능,/images/media/24/day.jpg,/images/media/24/night.jpg,/images/media/24/map.jpg
+25,엘리베이터 광고 타운보드,전국 아파트 단지 내 엘리베이터,25인치 LCD,40,엘리베이터 디지털 사이니지,06:00~24:00,3000,15,20000,80000000.00,전국 2만대 설치 아파트 입주민 대상 생활밀착형 매체,/images/media/25/day.jpg,/images/media/25/night.jpg,/images/media/25/map.jpg
+26,오피스보드 풀 스크린형,서울 주요 오피스 빌딩,25인치/34인치,30,엘리베이터 디지털 사이니지,06:00~24:00,3000,15,1,20000000.00,주요 프라임 오피스 빌딩 직장인 타겟 음성표출 가능,/images/media/26/day.jpg,/images/media/26/night.jpg,/images/media/26/map.jpg
+27,오피스보드 분할형,서울 주요 오피스 빌딩,25인치/34인치,30,엘리베이터 디지털 사이니지,06:00~24:00,3000,15,1,15000000.00,풀스크린/분할형 선택 가능 음성표출 가능,/images/media/27/day.jpg,/images/media/27/night.jpg,/images/media/27/map.jpg
+28,코엑스 디지털 사이니지,서울시 강남구 영동대로 513,49인치/55인치,20,주차장 디지털 사이니지,08:00~22:00,3000,15,1,5000000.00,코엑스 내방객 대상 KIOSK 18대 및 OLED 5대 설치,/images/media/28/day.jpg,/images/media/28/night.jpg,/images/media/28/map.jpg
+29,코엑스 라이트 박스 B2,서울시 강남구 영동대로 513 B2,4m x 2m,3,주차장 라이트박스,24:00~24:00,0,0,1,5500000.00,주차장 출입구 주변 유동인구 많은 위치 조명 효과,/images/media/29/day.jpg,/images/media/29/night.jpg,/images/media/29/map.jpg
+30,키로뷰 공항 광고,인천국제공항 제1 터미널/제2 터미널,캐리어 저울 43인치,15,공항 디지털 사이니지,02:00~25:00,150,15,182,20000000.00,인천공항 여행객 대상 저울형 디스플레이 월 390만명 이용,/images/media/30/day.jpg,/images/media/30/night.jpg,/images/media/30/map.jpg
+31,기아 오토큐 LCD 광고,전국 기아오토큐 지점,LCD 32인치,20,매장 내 디지털 사이니지,09:00~18:00,40,30,760,5000000.00,자동차 소유 고객 대상 전국 760개 직영 네트워크,/images/media/31/day.jpg,/images/media/31/night.jpg,/images/media/31/map.jpg
+32,타운보드 서울/수도권,서울 및 수도권 아파트 엘리베이터,25인치 LCD,40,엘리베이터 디지털 사이니지,06:00~24:00,3000,15,10000,45000000.00,수도권 1만대 설치 아파트 입주민 대상 생활밀착형 매체,/images/media/32/day.jpg,/images/media/32/night.jpg,/images/media/32/map.jpg
+33,코엑스 라이트 박스 B3,서울시 강남구 영동대로 513 B3,4m x 2m,4,주차장 라이트박스,24:00~24:00,0,0,1,3000000.00,B3층 지하주차장 9번/11번 출입구 전시장 방문객 타겟팅,/images/media/33/day.jpg,/images/media/33/night.jpg,/images/media/33/map.jpg
+34,코엑스 라이트 박스 B4,서울시 강남구 영동대로 513 B4,4m x 2m,3,주차장 라이트박스,24:00~24:00,0,0,1,1000000.00,B4층 지하주차장 16번 출입구 경제적인 광고 집행 가능,/images/media/34/day.jpg,/images/media/34/night.jpg,/images/media/34/map.jpg
+35,강남역 교보타워 전광판,서울시 서초구 강남대로 465,18m x 10m,24,벽면형 세로 사이니지,06:00~24:00,0,15,1,10000000.00,일 평균 유동인구 20만명 강남역 초역세권 랜드마크,/images/media/35/day.jpg,/images/media/35/night.jpg,/images/media/35/map.jpg
+36,청담동 MCM 빌딩 전광판,서울시 강남구 압구정로 416,15m x 12m,24,벽면형 세로 사이니지,06:00~24:00,0,15,1,9000000.00,명품거리 중심 고소득층 유동인구 강남 랜드마크 빌딩,/images/media/36/day.jpg,/images/media/36/night.jpg,/images/media/36/map.jpg
+37,명동 엠플라자 전광판,서울시 중구 명동길 14,20m x 15m,24,벽면형 세로 사이니지,06:00~24:00,0,15,1,12000000.00,관광객 및 유동인구 일 30만명 쇼핑 중심지역,/images/media/37/day.jpg,/images/media/37/night.jpg,/images/media/37/map.jpg

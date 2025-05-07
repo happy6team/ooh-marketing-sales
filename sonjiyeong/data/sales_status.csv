@@ -1,0 +1,8 @@
+sales_status_id,status_name,description,sort_order,is_final
+1,미접촉,"검색만 됨, 연락 안함",1,false
+2,접촉 완료,"콜/이메일 1회 이상",2,false
+3,제안서 발송,"구체적 제안 진행됨",3,false
+4,협의 중,"피드백/조건 조율 중",4,false
+5,집행 완료,"실제 광고 캠페인 진행",5,true
+6,영업 실패,"예산 없음, 거절, 응답 없음 등",6,true
+7,보류,"시기 아님, 예산 대기",7,false
