@@ -5,8 +5,25 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base(cls=AsyncAttrs)
 
+# SalesStatus 테이블
+class SalesStatus(Base):
+    __tablename__ = "sales_statuses"
+
+    sales_status_id = Column(Integer, primary_key=True, index=True)
+    status_name = Column(String(50), nullable=False)
+    description = Column(Text)
+    sort_order = Column(Integer)
+    is_final = Column(Boolean, default=False)
+
+    # SalesLog와의 관계 설정 (1:N 관계)
+    sales_logs = relationship("SalesLog", back_populates="sales_status")
+
+    # Brand와의 관계 설정 (1:N 관계)
+    brands = relationship("Brand", back_populates="sales_status")
+
+# Brand 테이블
 class Brand(Base):
-    __tablename__ = "brands"  
+    __tablename__ = "brands"
 
     brand_id = Column(Integer, primary_key=True, index=True)
     subsidiary_id = Column(Integer)
@@ -14,17 +31,21 @@ class Brand(Base):
     main_phone_number = Column(String(50))
     manager_email = Column(String(255))
     manager_phone_number = Column(String(50))
-    sales_status_id = Column(Integer, ForeignKey("sales_statuses.sales_status_id")) 
+    sales_status_id = Column(Integer, ForeignKey("sales_statuses.sales_status_id"))
     sales_status_note = Column(String(255))
 
-    # Brand와 SalesStatus 관계 추가
+    # SalesStatus와의 관계 설정 (1:N 관계)
     sales_status = relationship("SalesStatus", back_populates="brands")
 
-    # Brand와 SalesLog 관계 추가
+    # SalesLog와의 관계 설정 (1:N 관계)
     sales_logs = relationship("SalesLog", back_populates="brand")
+    
+    # Brand와 Campaign은 1:N 관계 추가
+    campaigns = relationship("Campaign", back_populates="brand")
 
+# Campaign 테이블
 class Campaign(Base):
-    __tablename__ = "campaigns"  
+    __tablename__ = "campaigns"
 
     campaign_id = Column(Integer, primary_key=True, index=True)
     brand_id = Column(Integer, ForeignKey("brands.brand_id"), nullable=False)
@@ -33,23 +54,31 @@ class Campaign(Base):
     status_id = Column(Integer, ForeignKey("campaign_statuses.campaign_status_id"))
     total_budget = Column(Float)
 
-    # 관계 설정 추가: Campaign과 CampaignMedia는 1:N 관계
-    medias = relationship("CampaignMedia", back_populates="campaign")
+    # 관계 설정: Campaign과 CampaignMedia는 1:N 관계
+    campaign_medias = relationship("CampaignMedia", back_populates="campaign")
 
-    # Campaign과 Brand는 1:N 관계
+    # Campaign과 Brand는 N:1 관계
     brand = relationship("Brand", back_populates="campaigns")
+    
+    # Campaign과 CampaignStatus는 N:1 관계
+    status = relationship("CampaignStatus", back_populates="campaigns")
 
+# CampaignStatus 테이블
 class CampaignStatus(Base):
-    __tablename__ = "campaign_statuses"  
+    __tablename__ = "campaign_statuses"
 
     campaign_status_id = Column(Integer, primary_key=True, index=True)
     status_name = Column(String(100), nullable=False)
 
-    # 관계 설정 추가: CampaignStatus와 CampaignMedia는 1:N 관계
+    # 관계 설정: CampaignStatus와 Campaign은 1:N 관계
+    campaigns = relationship("Campaign", back_populates="status")
+    
+    # 관계 설정: CampaignStatus와 CampaignMedia는 1:N 관계
     campaign_medias = relationship("CampaignMedia", back_populates="status")
 
+# Media 테이블
 class Media(Base):
-    __tablename__ = "medias"  
+    __tablename__ = "medias"
 
     media_id = Column(Integer, primary_key=True, index=True)
     media_name = Column(String(255), nullable=False)
@@ -67,24 +96,24 @@ class Media(Base):
     image_night_url = Column(String(255))
     image_map_url = Column(String(255))
 
-    # 관계 설정 추가: Media와 CampaignMedia는 1:N 관계
+    # 관계 설정: Media와 CampaignMedia는 1:N 관계
     campaign_medias = relationship("CampaignMedia", back_populates="media")
 
 class CampaignMedia(Base):
-    __tablename__ = "campaign_medias"  
+    __tablename__ = "campaign_medias"
 
     campaign_media_id = Column(Integer, primary_key=True, index=True)
-    campaign_id = Column(Integer, ForeignKey("campaigns.campaign_id"))
-    media_id = Column(Integer, ForeignKey("medias.media_id"))
+    campaign_id = Column(Integer, ForeignKey("campaigns.campaign_id"), nullable=False)
+    media_id = Column(Integer, ForeignKey("medias.media_id"), nullable=False)
     start_date = Column(Date)
     end_date = Column(Date)
     slot_count = Column(Integer)
     executed_price = Column(Float)
     execution_image_url = Column(String(255))
-    campaign_status_id = Column(Integer, ForeignKey("campaign_statuses.campaign_status_id"))
+    campaign_status_id = Column(Integer, ForeignKey("campaign_statuses.campaign_status_id"), nullable=False)
 
-    # 관계 설정 추가: CampaignMedia와 Campaign은 N:1 관계
-    campaign = relationship("Campaign", back_populates="medias")
+    # 관계 설정: CampaignMedia와 Campaign은 N:1 관계
+    campaign = relationship("Campaign", back_populates="campaign_medias", single_parent=True)
 
     # CampaignMedia와 CampaignStatus는 N:1 관계
     status = relationship("CampaignStatus", back_populates="campaign_medias")
@@ -92,8 +121,10 @@ class CampaignMedia(Base):
     # CampaignMedia와 Media는 N:1 관계
     media = relationship("Media", back_populates="campaign_medias")
 
+
+# SalesLog 테이블
 class SalesLog(Base):
-    __tablename__ = "sales_logs"  # 테이블 이름 수정
+    __tablename__ = "sales_logs"
 
     sales_log_id = Column(Integer, primary_key=True, index=True)
     brand_id = Column(Integer, ForeignKey("brands.brand_id"))
@@ -106,26 +137,14 @@ class SalesLog(Base):
     call_memo = Column(Text)
     client_needs_summary = Column(Text)
     followup_date = Column(Date)
-    sales_status_id = Column(Integer, ForeignKey("sales_statuses.sales_status_id"))  # 수정된 부분
+    sales_status_id = Column(Integer, ForeignKey("sales_statuses.sales_status_id"))
     proposal_uri = Column(String(255))
     is_proposal_generated = Column(Boolean, default=False)
     last_updated_at = Column(DateTime)
     remarks = Column(Text)
 
-    # 관계 설정 추가: SalesLog와 SalesStatus는 N:1 관계
-    sales_status = relationship("SalesStatus", back_populates="sales_logs")
-
-    # SalesLog와 Brand는 N:1 관계
+    # Brand와의 관계 설정 (N:1 관계)
     brand = relationship("Brand", back_populates="sales_logs")
 
-class SalesStatus(Base):
-    __tablename__ = "sales_statuses"  
-
-    sales_status_id = Column(Integer, primary_key=True, index=True)
-    status_name = Column(String(50), nullable=False)
-    description = Column(Text)
-    sort_order = Column(Integer)
-    is_final = Column(Boolean, default=False)
-
-    # 관계 설정 추가: SalesStatus와 SalesLog는 1:N 관계
-    sales_logs = relationship("SalesLog", back_populates="sales_status")
+    # SalesStatus와의 관계 설정 (N:1 관계)
+    sales_status = relationship("SalesStatus", back_populates="sales_logs")
