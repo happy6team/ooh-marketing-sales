@@ -10,6 +10,9 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+<<<<<<< HEAD
+.env
+=======
 # 환경 변수 파일
 .env
 
@@ -23,3 +26,4 @@ chroma_media/
 
 # 프로젝트 루트에 생성된 인덱스 파일 예외 처리 (필요 시)
 !src/data/*.bin  <- 필요한 경우 사용
+>>>>>>> e0aa5ec472906e4b5194bb31aa9c3953b6d64fa2
