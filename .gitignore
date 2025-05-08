@@ -9,3 +9,10 @@ __pycache__/
 # 기타 시스템 파일
 .DS_Store
 Thumbs.db
+
+# 패키지 관리 디렉토리
+venv/
+.env/
+
+# 파이썬 로그 파일
+*.log
