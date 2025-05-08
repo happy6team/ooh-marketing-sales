@@ -14,8 +14,8 @@ def run_company_media_agent(category, time_filter, manager_name):
 
     state = AgentState(
         brand_list=[],
-        brand_issue=[],
-        brand_description=[],
+        recent_brand_issues=[],
+        core_product_summary=[],
         category=category, 
         time_filter=time_filter,
         manager_name=manager_name
@@ -34,17 +34,17 @@ def run_company_media_agent(category, time_filter, manager_name):
 
     for i in range(df.shape[0]):
         brand_name = df.loc[i, 'brand_list']
-        recent_issue = df.loc[i, 'brand_issue']
-        brand_description = df.loc[i, 'brand_description']
+        recent_issue = df.loc[i, 'recent_brand_issues']
+        core_product_summary = df.loc[i, 'core_product_summary']
 
-        # match_data = media_matcher_agent(brand_name, recent_issue, brand_description)
+        # match_data = media_matcher_agent(brand_name, recent_issue, core_product_summary)
 
-        match_data = media_matcher_agent(brand_name, recent_issue, brand_description, manager_name, persist_directory="./chroma_media")
+        match_data = media_matcher_agent(brand_name, recent_issue, core_product_summary, manager_name, persist_directory="./chroma_media")
         
-        df.loc[i, 'matched_media'] = match_data['top_match']['media_name']
-        df.loc[i, 'media_location'] = match_data['top_match']['location']
-        df.loc[i, 'media_type'] = match_data['top_match']['media_type']
-        df.loc[i, 'match_reason'] = match_data['top_match']['match_reason']
+        df.loc[i, 'matched_media'] = match_data['media_name']
+        df.loc[i, 'media_location'] = match_data['location']
+        df.loc[i, 'media_type'] = match_data['media_type']
+        df.loc[i, 'match_reason'] = match_data['match_reason']
         df.loc[i, 'sales_call_script'] = match_data['sales_call_script']
         df.loc[i, 'proposal_email'] = match_data['proposal_email']
 
