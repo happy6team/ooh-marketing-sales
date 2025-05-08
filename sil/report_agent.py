@@ -92,20 +92,21 @@ def db_query_tool(query: str):
 def web_search_tool(query: str) -> str:
     return f"[WEB SEARCH RESULT for: {query}]"
 
-def vectordb_search_tool(query: str, collection_name: str, top_k: int = 3) -> str:
-    vectorstore = Chroma(
-        collection_name=collection_name,
-        embedding_function=embedding_function
-    )
+def vectordb_search_tool(query: str, vectorstore, top_k: int = 3) -> str:
+    # ✅ collection_name으로 새 vectorstore 만들던 부분 삭제!
+    # vectorstore = Chroma(...) ← 삭제
+
     results = vectorstore.similarity_search(query, k=top_k)
 
     combined_results = []
     for doc in results:
         content = doc.page_content
 
+        # ',' 기준 줄바꿈 및 포맷
         content_lines = [f"- {line.strip()}" for line in content.split(",")]
         content_formatted = "\n".join(content_lines)
 
+        # 이미지 URL 처리
         image_url = doc.metadata.get("execution_image_url", "")
         if image_url.startswith("/images/"):
             image_url = "../" + image_url.lstrip("/")
@@ -117,40 +118,53 @@ def vectordb_search_tool(query: str, collection_name: str, top_k: int = 3) -> st
 
     return "\n\n---\n\n".join(combined_results)
 
-# --- ChromaDB에 campaign_media 데이터 올리기 (최초 1회) ---
-csv_path = "../data/data_sample/campaign_media.csv"
-df = pd.read_csv(csv_path)
-
-def row_to_text(row):
-    return (
-        f"캠페인 ID: {row['campaign_id']}, "
-        f"매체 ID: {row['media_id']}, "
-        f"시작일: {row['start_date']}, "
-        f"종료일: {row['end_date']}, "
-        f"구좌 수: {row['slot_count']}, "
-        f"집행 가격: {row['executed_price']}, "
-        f"진행 상태: {row['campaign_media_status']}"
-    )
-
-texts = []
-metadatas = []
-
-for idx, row in df.iterrows():
-    texts.append(row_to_text(row))
-    metadatas.append({"execution_image_url": row["execution_image_url"]})
-
-# --- 문서 분할 ---
-splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-docs = splitter.create_documents(texts, metadatas=metadatas)
-
-# --- Chroma 컬렉션에 저장 (HuggingFace 임베딩 사용) ---
-vectorstore = Chroma.from_documents(
-    documents=docs,
-    embedding=embedding_function,  # ✅ embedding_function으로 수정
-    collection_name="campaign_media_chroma_hf"  # ✅ 새 컬렉션 이름
+# --- ✅ 기존 ChromaDB 불러오기 (CSV → 임베딩 과정 제거) ---
+vectorstore = Chroma(
+    collection_name="campaign_media_chroma_hf",
+    embedding_function=embedding_function,
+    persist_directory="../chroma_db2"   # chroma.sqlite3가 있는 경로
 )
 
-print(f"✅ HuggingFace 임베딩으로 {len(docs)}개 문서 저장 완료!")
+print("✅ 기존 ChromaDB 로드 완료!")
+
+
+# # --- ChromaDB에 campaign_media 데이터 올리기 (최초 1회) ---
+# csv_path = "../data/data_sample/campaign_media.csv"
+# df = pd.read_csv(csv_path)
+
+# def row_to_text(row):
+#     return (
+#         f"캠페인 ID: {row['campaign_id']}, "
+#         f"매체 ID: {row['media_id']}, "
+#         f"시작일: {row['start_date']}, "
+#         f"종료일: {row['end_date']}, "
+#         f"구좌 수: {row['slot_count']}, "
+#         f"집행 가격: {row['executed_price']}, "
+#         f"진행 상태: {row['campaign_media_status']}"
+#     )
+
+# texts = []
+# metadatas = []
+
+# for idx, row in df.iterrows():
+#     texts.append(row_to_text(row))
+#     metadatas.append({"execution_image_url": row["execution_image_url"]})
+
+# # --- 문서 분할 ---
+# splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+# docs = splitter.create_documents(texts, metadatas=metadatas)
+
+# # --- Chroma 컬렉션에 저장 (HuggingFace 임베딩 사용) ---
+# vectorstore = Chroma.from_documents(
+#     documents=docs,
+#     embedding=embedding_function,
+#     collection_name="campaign_media_chroma_hf",
+#     persist_directory="../chroma_db"  # 파일 저장 위치 지정
+# )
+
+# vectorstore.persist()  # 저장!
+
+# print(f"✅ HuggingFace 임베딩으로 {len(docs)}개 문서 저장 완료!")
 
 def query_brand_and_sales_logs(brand_name: str):
     load_dotenv()
@@ -218,12 +232,12 @@ def analyze_brand_and_needs(state: ProposalState):
         "sales_status": sales_status
     }
 
-# --- Node 2: 유사 집행 사례 조회 사진 정보 먼저---
+# --- Node 2: 유사 집행 사례 조회 사진 정보 ---
 def retrieve_previous_campaigns(state: ProposalState):
     client_needs = state.get("client_needs") or "옥외 광고 집행 사례"
 
-    collection_name = "campaign_media_chroma_hf"  # 벡터스토어 컬렉션 이름
-    similar_cases = vectordb_search_tool(client_needs, collection_name)
+    # collection_name이 아니라 vectorstore 객체 직접 사용
+    similar_cases = vectordb_search_tool(client_needs, vectorstore)
 
     return {**state, "previous_campaigns": similar_cases}
 
@@ -419,7 +433,7 @@ def generate_proposal(state: ProposalState):
     캠페인 목표: {client_needs}
     추천 매체: {recommended_media}
 
-    위 정보를 바탕으로 캠페인의 결론 부분을 작성하세요.
+    위 정보를 바탕으로 제안서의 마무리 결론 부분을 작성하세요.
     """)
     chain = prompt | llm
     conclusion = chain.invoke(state).content
