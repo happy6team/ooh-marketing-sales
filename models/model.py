@@ -21,7 +21,8 @@ class SalesStatus(Base):
     # Brand와의 관계 설정 (1:N 관계)
     brands = relationship("Brand", back_populates="sales_status")
 
-# Brand 테이블
+from sqlalchemy import DateTime  # 이미 되어 있다면 생략
+
 class Brand(Base):
     __tablename__ = "brands"
 
@@ -34,14 +35,21 @@ class Brand(Base):
     sales_status_id = Column(Integer, ForeignKey("sales_statuses.sales_status_id"))
     sales_status_note = Column(String(255))
 
+    # 새롭게 추가된 필드
+    category = Column(String(100))
+    core_product_summary = Column(Text)
+    recent_brand_issues = Column(Text)
+    last_updated_at = Column(DateTime)
+
     # SalesStatus와의 관계 설정 (1:N 관계)
     sales_status = relationship("SalesStatus", back_populates="brands")
 
     # SalesLog와의 관계 설정 (1:N 관계)
     sales_logs = relationship("SalesLog", back_populates="brand")
-    
+
     # Brand와 Campaign은 1:N 관계 추가
     campaigns = relationship("Campaign", back_populates="brand")
+
 
 # Campaign 테이블
 class Campaign(Base):
@@ -95,6 +103,11 @@ class Media(Base):
     image_day_url = Column(String(255))
     image_night_url = Column(String(255))
     image_map_url = Column(String(255))
+
+    # 새롭게 추가된 필드
+    population_target = Column(String(255))
+    media_characteristics = Column(Text)
+    case_examples = Column(Text)
 
     # 관계 설정: Media와 CampaignMedia는 1:N 관계
     campaign_medias = relationship("CampaignMedia", back_populates="media")
