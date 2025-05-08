@@ -1,6 +1,6 @@
 import pandas as pd
 from sqlalchemy.ext.asyncio import AsyncSession
-from models.model import Brand
+from models.db_model import Brand
 from sqlalchemy.future import select
 
 async def load_brand(file_path: str, db: AsyncSession):
