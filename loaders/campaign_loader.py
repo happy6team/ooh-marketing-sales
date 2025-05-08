@@ -15,6 +15,7 @@ async def load_campaign(file_path: str, db: AsyncSession):
             campaign = Campaign(
                 campaign_id=row["campaign_id"],
                 brand_id=row["brand_id"],
+                campaign_name=row["campaign_name"],
                 start_date=datetime.strptime(row["start_date"], "%Y-%m-%d") if pd.notna(row["start_date"]) else None,
                 end_date=datetime.strptime(row["end_date"], "%Y-%m-%d") if pd.notna(row["end_date"]) else None,
                 campaign_status=row["campaign_status"],  # 문자열 그대로 저장

@@ -18,6 +18,7 @@ async def load_campaign_media(file_path: str, db: AsyncSession):
                 campaign_media_id=row["campaign_media_id"],
                 campaign_id=row["campaign_id"],
                 media_id=row["media_id"],
+                campaign_name=row["campaign_name"],
                 # 날짜를 datetime으로 변환
                 start_date=datetime.strptime(row["start_date"], "%Y-%m-%d") if pd.notna(row["start_date"]) else None,
                 end_date=datetime.strptime(row["end_date"], "%Y-%m-%d") if pd.notna(row["end_date"]) else None,
