@@ -4,6 +4,9 @@ from langchain_openai import ChatOpenAI
 from transformers import AutoTokenizer, AutoModel
 import torch
 import numpy as np
+from datetime import datetime
+
+
 
 # BERT 임베딩 클래스 재정의 (쿼리용)
 class BERTSentenceEmbedding:
@@ -37,15 +40,15 @@ def load_vectorstore(persist_directory="./chroma_media", collection_name="media"
     
     return chroma_collection
 
-def media_matcher_agent(brand_name, recent_issue, brand_description, manager_name, persist_directory="./chroma_media"):
+def media_matcher_agent(brand_name, recent_issue, core_product_summary, manager_name, persist_directory="./chroma_media"):
     # LLM 초기화
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo")  # 실제 사용 모델로 변경
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     
     # 벡터스토어 로드
     chroma_collection = load_vectorstore(persist_directory)
     
     # 쿼리 텍스트 구성
-    query_text = f"{recent_issue} / {brand_description}"
+    query_text = f"{recent_issue} / {core_product_summary}"
     
     # 유사도 검색 수행
     results = chroma_collection.similarity_search_with_score(query_text, k=10)
@@ -68,7 +71,7 @@ def media_matcher_agent(brand_name, recent_issue, brand_description, manager_nam
     script_prompt = f"""
     브랜드명: {brand_name}
     최근 마케팅 이슈: {recent_issue}
-    브랜드 설명: {brand_description}
+    브랜드 설명: {core_product_summary}
     추천 매체: {top_match['media_name']} ({top_match['location']}) - {top_match['match_reason']}
 
     위 정보를 바탕으로, {brand_name}의 담당자에게 전화할 때 사용할 영업 스크립트를 3-5줄로 작성해주세요.
@@ -86,7 +89,7 @@ def media_matcher_agent(brand_name, recent_issue, brand_description, manager_nam
     email_prompt = f"""
     브랜드명: {brand_name}
     최근 마케팅 이슈: {recent_issue}
-    브랜드 설명: {brand_description}
+    브랜드 설명: {core_product_summary}
     담당자 이름: {manager_name}
     추천 매체: {top_match['media_name']} ({top_match['location']}) - {top_match['match_reason']}
 
@@ -119,9 +122,22 @@ def media_matcher_agent(brand_name, recent_issue, brand_description, manager_nam
     """
     proposal_email = llm.invoke(email_prompt).content.strip()
 
+    now = datetime.now()
+    formatted = now.strftime("%Y-%m-%d %H:%M:%S")
+
     # 결과 반환
     return {
-        "top_match": top_match,
+
+        "media_id" : top_match["media_id"],
+        "media_name": top_match["media_name"],
+        "location": top_match["location"],
+        "media_type": top_match["media_type"],
+        "match_reason": top_match["match_reason"],
+
         "sales_call_script": sales_call_script,
-        "proposal_email": proposal_email
+        "proposal_email": proposal_email,
+
+        "generated_at" : formatted, 
+        "used_in_sales" : False, 
+        "last_updated_at" : formatted
     }
