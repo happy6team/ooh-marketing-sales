@@ -21,6 +21,18 @@ if 'initialized' not in st.session_state:
     st.session_state.show_email_modal = False
     st.session_state.expanded_company = None  # 현재 확장된 회사 인덱스
 
+# 영업 단계 목록 (단순화)
+SALES_STATUS = ["미접촉", "접촉 완료", "제안서 발송", "협의 중", "진행 완료", "영업 실패", "보류"]
+
+# 영업 단계 변경 콜백 함수
+def update_sales_status(idx):
+    """선택한 영업 단계로 상태 변경"""
+    status_key = f"status_select_{idx}"
+    if status_key in st.session_state:
+        new_status = st.session_state[status_key]
+        if st.session_state.company_data is not None and idx < len(st.session_state.company_data):
+            st.session_state.company_data.loc[idx, 'sales_status'] = new_status
+
 # 메인 타이틀
 st.title("영업 자동화 대시보드")
 
@@ -59,7 +71,11 @@ if st.sidebar.button("기업 리스트 업데이트", use_container_width=True):
         df["manager_email"] = None
     if "manager_phone_number" not in df.columns:
         df["manager_phone_number"] = None
-        
+    
+    # 영업 상태 기본값 설정
+    if "sales_status" not in df.columns:
+        df["sales_status"] = "미접촉"
+    
     st.session_state.company_data = df.copy()
     st.sidebar.success("기업 리스트가 성공적으로 업데이트되었습니다!")
 
@@ -69,6 +85,9 @@ def generate_proposal(idx):
         # 실제로는 report_agent.py와 email_agent.py를 호출
         st.session_state.proposal_generated[idx] = True
         st.session_state.email_script_generated[idx] = True
+        
+        # 제안서 생성 시 영업 단계를 "제안서 발송"으로 업데이트
+        st.session_state.company_data.loc[idx, 'sales_status'] = "제안서 발송"
         return True
     return False
 
@@ -93,6 +112,8 @@ def show_call_dialog(idx):
         # 다이얼로그 내의 버튼에 고유한 키 할당
         if st.button("통화 완료", key=f"dialog_complete_{idx}", type="primary", use_container_width=True):
             st.session_state.call_completed[idx] = True
+            # 통화 완료 시 영업 단계를 "접촉 완료"로 업데이트
+            st.session_state.company_data.loc[idx, 'sales_status'] = "접촉 완료"
             st.rerun()
 
 # 이메일 다이얼로그 함수
@@ -137,12 +158,15 @@ def show_email_dialog(idx):
         if st.button("이메일 발송", key=f"email_dialog_send_{idx}", type="primary", use_container_width=True):
             st.session_state.email_sent[idx] = True
             st.success(f"{recipient_email}로 이메일이 성공적으로 발송되었습니다.")
+            # 이메일 발송 완료 시 영업 단계가 "제안서 발송"이 아니면 "접촉 완료"로 업데이트
+            current_status = st.session_state.company_data.loc[idx, 'sales_status']
+            if current_status != "제안서 발송":
+                st.session_state.company_data.loc[idx, 'sales_status'] = "접촉 완료"
             st.rerun()
 
 # 작업할 데이터 설정 및 표시
 if st.session_state.company_data is not None:
     working_df = st.session_state.company_data
-
     
     # 기업 리스트
     st.subheader("기업 리스트")
@@ -169,6 +193,7 @@ if st.session_state.company_data is not None:
             with col2:
                 st.write(f"{working_df.loc[i, 'recent_brand_issues']}")
             with col3:
+                # 영업 단계 표시 (단순 텍스트만)
                 st.write(f"{working_df.loc[i, 'sales_status']}")
     
             with col4:
@@ -192,7 +217,7 @@ if st.session_state.company_data is not None:
                 """)
     
                 with st.container():
-                    col1, col2, col3 = st.columns([1, 1, 1])
+                    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     
                     # 현재 값 가져오기 (None이면 빈 문자열로 처리)
                     current_name = "" if pd.isna(working_df.loc[i, "manager_name"]) else working_df.loc[i, "manager_name"]
@@ -213,6 +238,21 @@ if st.session_state.company_data is not None:
                         manager_phone = st.text_input("브랜드 담당자 전화번호", value=current_phone, key=f"phone_input_{i}")
                         if manager_phone:
                             st.session_state.company_data.loc[i, "manager_phone_number"] = manager_phone
+
+                    with col4:
+                        # 영업 단계 선택 (콜백 사용)
+                        # 현재 영업 단계 표시
+                        current_status = working_df.loc[i, 'sales_status']
+                        
+                        # 영업 단계 선택 - 상태가 변경되면 콜백 함수로 바로 적용
+                        new_status = st.selectbox(
+                            "선택하면 자동으로 저장됩니다",
+                            options=SALES_STATUS,
+                            index=SALES_STATUS.index(current_status) if current_status in SALES_STATUS else 0,
+                            key=f"status_select_{i}",
+                            on_change=update_sales_status,
+                            args=(i,)
+                        )
                 
                 # 버튼들을 오른쪽 하단에 한 줄로 배치
                 _, _, button_col = st.columns([2, 2, 3])
