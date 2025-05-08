@@ -32,6 +32,7 @@ class Campaign(Base):
 
     campaign_id = Column(Integer, primary_key=True, index=True)
     brand_id = Column(Integer, ForeignKey("brands.brand_id"), nullable=False)
+    campaign_name = Column(Text)
     start_date = Column(Date)
     end_date = Column(Date)
     campaign_status = Column(String(50))  # 문자열 상태로 처리
@@ -74,6 +75,7 @@ class CampaignMedia(Base):
     campaign_media_id = Column(Integer, primary_key=True, index=True)
     campaign_id = Column(Integer, ForeignKey("campaigns.campaign_id"), nullable=False)
     media_id = Column(Integer, ForeignKey("medias.media_id"), nullable=False)
+    campaign_name = Column(Text)
     start_date = Column(Date)
     end_date = Column(Date)
     slot_count = Column(Integer)
