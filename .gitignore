@@ -16,3 +16,7 @@ venv/
 
 # 파이썬 로그 파일
 *.log
+
+# Chroma db
+chroma/
+*.sqlite3
