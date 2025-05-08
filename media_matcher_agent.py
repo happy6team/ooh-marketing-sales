@@ -25,7 +25,7 @@ class BERTSentenceEmbedding:
         with torch.no_grad():
             outputs = self.model(**inputs)
         cls_embedding = outputs.last_hidden_state[:, 0, :].squeeze(0)
-        return cls_embedding.cpu().numpy()
+        return cls_embedding.cpu().numpy().tolist()
 
 def load_vectorstore(persist_directory="./chroma_media", collection_name="media"):
     # 임베딩 함수 초기화 (쿼리용)
