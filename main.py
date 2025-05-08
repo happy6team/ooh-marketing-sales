@@ -58,3 +58,45 @@ async def process_brands(session: AsyncSession = Depends(get_db)):
         "saved_count": len(saved) if saved else 0,
         "brand_names": fields["brand_list"]
     }
+
+from media_matcher_agent import media_matcher_agent, save_brand_and_media_match
+
+@app.get("/match_media")
+async def match_media(session: AsyncSession = Depends(get_db)):
+    
+    fields = {
+        "brand_list": ["브랜드1", "브랜드2", "브랜드3"],  # 예시 브랜드 목록
+        "category": "패션",  # 예시 카테고리
+        "recent_brand_issues": "최근 1개월 동안 주목받은 패션 트렌드",  # 최근 브랜드 이슈
+        "core_product_summary": "고급스러운 디자인의 패션 아이템들",  # 핵심 제품 요약
+    }
+    
+    manager_name = "김이사"  # 예시. 실제 운영 시 auth 정보에서 가져오거나 request로 받기
+    saved_matches = []
+
+    # fields에서 brand_names 등을 가져옴
+    for brand_name in fields["brand_list"]:
+        media_result = media_matcher_agent(
+            brand_name=brand_name,
+            recent_issue=fields["recent_brand_issues"],
+            core_product_summary=fields["core_product_summary"],
+            manager_name=manager_name
+        )
+
+        save_result = await save_brand_and_media_match(
+            {
+                "brand_name": brand_name,
+                "category": fields["category"],
+                "core_product_summary": fields["core_product_summary"],
+                "recent_brand_issues": fields["recent_brand_issues"]
+            },
+            media_result,
+            session
+        )
+        saved_matches.append(save_result)
+
+    return {
+        "message": "미디어 매칭 저장 완료",
+        "matched_count": sum(1 for r in saved_matches if r),
+        "matched_brand_names": fields["brand_list"]
+    }

@@ -6,7 +6,12 @@ import torch
 import numpy as np
 from datetime import datetime
 
-
+from sqlalchemy import select, func
+from sqlalchemy.exc import SQLAlchemyError
+from models.db_model import Brand, BrandMediaMatch
+from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
+import uuid
 
 # BERT 임베딩 클래스 재정의 (쿼리용)
 class BERTSentenceEmbedding:
@@ -141,3 +146,93 @@ def media_matcher_agent(brand_name, recent_issue, core_product_summary, manager_
         "used_in_sales" : False, 
         "last_updated_at" : formatted
     }
+
+async def save_brand_and_media_match(fields: dict, result: dict, session: AsyncSession):
+    try:
+        brand_name = fields["brand_name"].strip()
+
+        # 1. 브랜드 존재 여부 확인
+        stmt = select(Brand).where(Brand.brand_name == brand_name)
+        existing_result = await session.execute(stmt)
+        existing_brand = existing_result.scalars().first()
+
+        if existing_brand:
+            brand_id = existing_brand.brand_id
+        else:
+            # 새 brand_id 계산
+            max_id_stmt = select(func.max(Brand.brand_id))
+            max_id_result = await session.execute(max_id_stmt)
+            max_brand_id = max_id_result.scalar() or 0
+            new_brand_id = max_brand_id + 1
+
+            # 새 브랜드 저장
+            new_brand = Brand(
+                brand_id=new_brand_id,
+                subsidiary_id=str(uuid.uuid4()),
+                brand_name=brand_name,
+                main_phone_number=None,
+                manager_email=None,
+                manager_phone_number=None,
+                sales_status=fields.get("sales_status"),
+                sales_status_note=None,
+                category=fields.get("category"),
+                core_product_summary=fields["core_product_summary"],
+                recent_brand_issues=fields["recent_brand_issues"],
+                last_updated_at=datetime.now()
+            )
+            session.add(new_brand)
+            await session.flush()
+            await session.refresh(new_brand)
+            brand_id = new_brand.brand_id
+
+        # 2. brand_id + media_id 조합 중복 확인
+        media_id = result["media_id"]
+        stmt = select(BrandMediaMatch).where(
+            BrandMediaMatch.brand_id == brand_id,
+            BrandMediaMatch.media_id == media_id
+        )
+        existing_match_result = await session.execute(stmt)
+        existing_match = existing_match_result.scalars().first()
+
+        if existing_match:
+            print(f"✅ 이미 존재하는 매치 (brand_id: {brand_id}, media_id: {media_id})")
+            return existing_match
+
+        # proposal_email 분할
+        email_parts = result["proposal_email"].split("\n\n", 2)
+        email_part_1 = email_parts[0] if len(email_parts) > 0 else ""
+        email_part_2 = email_parts[1] if len(email_parts) > 1 else ""
+        email_part_3 = email_parts[2] if len(email_parts) > 2 else ""
+
+        # 새 brand_media_match 저장
+        max_match_id_stmt = select(func.max(BrandMediaMatch.id))
+        max_match_id_result = await session.execute(max_match_id_stmt)
+        max_match_id = max_match_id_result.scalar() or 0
+        new_match_id = max_match_id + 1
+
+        new_match = BrandMediaMatch(
+            id=new_match_id,
+            brand_id=brand_id,
+            media_id=media_id,
+            match_reason=result["match_reason"],
+            sales_call_script=result["sales_call_script"],
+            proposal_email_part_1=email_part_1,
+            proposal_email_part_2=email_part_2,
+            proposal_email_part_3=email_part_3,
+            generated_at=datetime.strptime(result["generated_at"], "%Y-%m-%d %H:%M:%S"),
+            used_in_sales=result["used_in_sales"],
+            last_updated_at=datetime.strptime(result["last_updated_at"], "%Y-%m-%d %H:%M:%S"),
+        )
+
+        session.add(new_match)
+        await session.flush()
+        await session.refresh(new_match)
+        await session.commit()
+
+        print(f"✅ 저장 완료: brand_id={brand_id}, media_id={media_id}")
+        return new_match
+
+    except SQLAlchemyError as e:
+        print(f"❌ 오류 발생: {e}")
+        await session.rollback()
+        return None
