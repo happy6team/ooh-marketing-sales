@@ -28,7 +28,7 @@ async def process_call_data(session: AsyncSession = Depends(get_db)):
     )
 
     # run 함수 실행하여 결과 얻기
-    fields = await run(state)
+    fields = run(state)
 
     # 비동기적으로 MariaDB에 데이터 저장
     await save_to_mariadb_async(fields, session)

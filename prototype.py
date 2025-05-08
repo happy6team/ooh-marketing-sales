@@ -38,7 +38,7 @@ def empty_to_none(value):
 # 5️⃣ 음성 인식 → State 반환
 def transcribe(state: CallingState) -> CallingState:
     model = WhisperModel("base")
-    segments, info = model.transcribe("./data/audio_sample/calling_data.m4a")
+    segments, info = model.transcribe("./data/audio_sample/calling_data.wav")
     full_text = " ".join([seg.text for seg in segments])
     print("📝 인식된 텍스트:")
     print(full_text)
