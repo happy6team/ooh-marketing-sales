@@ -3,6 +3,7 @@ from AgentState import AgentState
 from langchain_teddynote.tools.tavily import TavilySearch
 from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
+from datetime import datetime
 
 import ast
 import re
@@ -20,7 +21,7 @@ def brand_explorer_agent(state: AgentState) -> AgentState:
         state: 입력 상태(비어있을 수 있음)
         
     Returns:
-        brand_list, brand_issue, brand_description이 포함된 업데이트된 AgentState
+        brand_list, recent_brand_issues, core_product_summary이 포함된 업데이트된 AgentState
     """
 
     category = state["category"]
@@ -112,20 +113,29 @@ def brand_explorer_agent(state: AgentState) -> AgentState:
         
         # 결과 분리하여 준비
         brand_names = [item["name"] for item in brand_data]
-        brand_issues = [item["issue"] for item in brand_data]
-        brand_descriptions = [item["description"] for item in brand_data]
+        recent_brand_issues = [item["issue"] for item in brand_data]
+        core_product_summarys = [item["description"] for item in brand_data]
         
     except Exception as e:
         print(f"⚠️ 응답 파싱 실패: {e}")
         print(f"원본 응답: {response.content}")
         # 오류 발생 시 빈 리스트 반환
         brand_names = []
-        brand_issues = []
-        brand_descriptions = []
+        recent_brand_issues = []
+        core_product_summarys = []
+
+    now = datetime.now()
+    formatted = now.strftime("%Y-%m-%d %H:%M:%S")
+
+    
     
     # 결과 업데이트
     return {
         "brand_list": brand_names,
-        "brand_issue": brand_issues,
-        "brand_description": brand_descriptions
+        "recent_brand_issues": recent_brand_issues,
+        "core_product_summary": core_product_summarys, 
+
+        "sales_status": "미접촉", 
+        "category" : category, 
+        "last_updated_at" : formatted
     }
