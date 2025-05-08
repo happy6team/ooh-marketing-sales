@@ -1,27 +1,10 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Text, Date, Float
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.ext.asyncio import AsyncAttrs
-from sqlalchemy.orm import declarative_base
+from datetime import datetime
+import re
 
 Base = declarative_base(cls=AsyncAttrs)
-
-# SalesStatus 테이블
-class SalesStatus(Base):
-    __tablename__ = "sales_statuses"
-
-    sales_status_id = Column(Integer, primary_key=True, index=True)
-    status_name = Column(String(50), nullable=False)
-    description = Column(Text)
-    sort_order = Column(Integer)
-    is_final = Column(Boolean, default=False)
-
-    # SalesLog와의 관계 설정 (1:N 관계)
-    sales_logs = relationship("SalesLog", back_populates="sales_status")
-
-    # Brand와의 관계 설정 (1:N 관계)
-    brands = relationship("Brand", back_populates="sales_status")
-
-from sqlalchemy import DateTime  # 이미 되어 있다면 생략
 
 class Brand(Base):
     __tablename__ = "brands"
@@ -32,26 +15,18 @@ class Brand(Base):
     main_phone_number = Column(String(50))
     manager_email = Column(String(255))
     manager_phone_number = Column(String(50))
-    sales_status_id = Column(Integer, ForeignKey("sales_statuses.sales_status_id"))
+    sales_status = Column(String(100))  # 문자열로 변경된 상태
     sales_status_note = Column(String(255))
-
-    # 새롭게 추가된 필드
     category = Column(String(100))
     core_product_summary = Column(Text)
     recent_brand_issues = Column(Text)
-    last_updated_at = Column(DateTime)
+    last_updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
 
-    # SalesStatus와의 관계 설정 (1:N 관계)
-    sales_status = relationship("SalesStatus", back_populates="brands")
-
-    # SalesLog와의 관계 설정 (1:N 관계)
+    # 관계 설정
     sales_logs = relationship("SalesLog", back_populates="brand")
-
-    # Brand와 Campaign은 1:N 관계 추가
     campaigns = relationship("Campaign", back_populates="brand")
+    media_matches = relationship('BrandMediaMatch', back_populates='brand')
 
-
-# Campaign 테이블
 class Campaign(Base):
     __tablename__ = "campaigns"
 
@@ -59,32 +34,13 @@ class Campaign(Base):
     brand_id = Column(Integer, ForeignKey("brands.brand_id"), nullable=False)
     start_date = Column(Date)
     end_date = Column(Date)
-    status_id = Column(Integer, ForeignKey("campaign_statuses.campaign_status_id"))
+    campaign_status = Column(String(50))  # 문자열 상태로 처리
     total_budget = Column(Float)
 
-    # 관계 설정: Campaign과 CampaignMedia는 1:N 관계
     campaign_medias = relationship("CampaignMedia", back_populates="campaign")
-
-    # Campaign과 Brand는 N:1 관계
     brand = relationship("Brand", back_populates="campaigns")
-    
-    # Campaign과 CampaignStatus는 N:1 관계
-    status = relationship("CampaignStatus", back_populates="campaigns")
 
-# CampaignStatus 테이블
-class CampaignStatus(Base):
-    __tablename__ = "campaign_statuses"
 
-    campaign_status_id = Column(Integer, primary_key=True, index=True)
-    status_name = Column(String(100), nullable=False)
-
-    # 관계 설정: CampaignStatus와 Campaign은 1:N 관계
-    campaigns = relationship("Campaign", back_populates="status")
-    
-    # 관계 설정: CampaignStatus와 CampaignMedia는 1:N 관계
-    campaign_medias = relationship("CampaignMedia", back_populates="status")
-
-# Media 테이블
 class Media(Base):
     __tablename__ = "medias"
 
@@ -99,18 +55,18 @@ class Media(Base):
     duration_seconds = Column(Integer)
     quantity = Column(Integer)
     unit_price = Column(Float)
-    features = Column(Text)
     image_day_url = Column(String(255))
     image_night_url = Column(String(255))
     image_map_url = Column(String(255))
 
-    # 새롭게 추가된 필드
+    # 추가된 필드
     population_target = Column(String(255))
     media_characteristics = Column(Text)
     case_examples = Column(Text)
 
-    # 관계 설정: Media와 CampaignMedia는 1:N 관계
     campaign_medias = relationship("CampaignMedia", back_populates="media")
+    brand_matches = relationship('BrandMediaMatch', back_populates='media')
+
 
 class CampaignMedia(Base):
     __tablename__ = "campaign_medias"
@@ -123,41 +79,66 @@ class CampaignMedia(Base):
     slot_count = Column(Integer)
     executed_price = Column(Float)
     execution_image_url = Column(String(255))
-    campaign_status_id = Column(Integer, ForeignKey("campaign_statuses.campaign_status_id"), nullable=False)
+    campaign_media_status = Column(String(50))
 
-    # 관계 설정: CampaignMedia와 Campaign은 N:1 관계
     campaign = relationship("Campaign", back_populates="campaign_medias", single_parent=True)
-
-    # CampaignMedia와 CampaignStatus는 N:1 관계
-    status = relationship("CampaignStatus", back_populates="campaign_medias")
-
-    # CampaignMedia와 Media는 N:1 관계
     media = relationship("Media", back_populates="campaign_medias")
 
 
-# SalesLog 테이블
 class SalesLog(Base):
     __tablename__ = "sales_logs"
 
     sales_log_id = Column(Integer, primary_key=True, index=True)
     brand_id = Column(Integer, ForeignKey("brands.brand_id"))
-    brand_name = Column(String(255), nullable=False)
+    brand_name = Column(String(255), nullable=False)  # CSV에 있으므로 유지
     manager_name = Column(String(255), nullable=False)
-    manager_email = Column(String(255))
+    manager_email = Column(String(255), nullable=True)
     agent_name = Column(String(255))
     contact_time = Column(DateTime)
     contact_method = Column(String(50))
+    call_full_text = Column(Text)  # 새롭게 추가
     call_memo = Column(Text)
     client_needs_summary = Column(Text)
-    followup_date = Column(Date)
-    sales_status_id = Column(Integer, ForeignKey("sales_statuses.sales_status_id"))
-    proposal_uri = Column(String(255))
+    
+    # Enum 타입을 사용하여 sales_status 상태값 제한
+    sales_status = Column(String(50), nullable=False)
+    
+    proposal_url = Column(String(255))  # 변경된 필드명
     is_proposal_generated = Column(Boolean, default=False)
-    last_updated_at = Column(DateTime)
+    last_updated_at = Column(DateTime, nullable=True)
     remarks = Column(Text)
 
-    # Brand와의 관계 설정 (N:1 관계)
     brand = relationship("Brand", back_populates="sales_logs")
 
-    # SalesStatus와의 관계 설정 (N:1 관계)
-    sales_status = relationship("SalesStatus", back_populates="sales_logs")
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if self.manager_email:
+            self._validate_email(self.manager_email)
+    
+    def _validate_email(self, email):
+        """간단한 이메일 형식 검증"""
+        email_pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+        if not re.match(email_pattern, email):
+            raise ValueError(f"잘못된 이메일 형식: {email}")
+
+
+class BrandMediaMatch(Base):
+    __tablename__ = 'brand_media_matches'
+
+    id = Column(Integer, primary_key=True, index=True)
+    brand_id = Column(Integer, ForeignKey('brands.brand_id'))
+    media_id = Column(Integer, ForeignKey('medias.media_id')) 
+    match_reason = Column(Text, nullable=False)
+    sales_call_script = Column(Text, nullable=False)
+    proposal_email_part_1 = Column(Text, nullable=True)
+    proposal_email_part_2 = Column(Text, nullable=True)
+    proposal_email_part_3 = Column(Text, nullable=True)
+    generated_at = Column(DateTime, nullable=False)
+    used_in_sales = Column(Boolean, nullable=False)
+    last_updated_at = Column(DateTime, nullable=True)
+
+    # 'brand' 속성 추가: 'brands' 테이블과의 관계 정의
+    brand = relationship('Brand', back_populates='media_matches')
+
+    # 'media'와의 관계
+    media = relationship('Media', back_populates='brand_matches')

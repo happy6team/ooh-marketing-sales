@@ -9,9 +9,9 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup_event():
     try:
-        await init_db()
+        await init_db() # 테이블 생성
         async with AsyncSessionLocal() as session:
-            await load_all_data(session)
+            await load_all_data(session) # 데이터 로드
     except Exception as e:
         import logging
         logging.exception("Startup data loading failed")
