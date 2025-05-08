@@ -21,3 +21,9 @@ venv/
 # Chroma db
 chroma/
 *.sqlite3
+
+# Jupyter Notebook 자동 저장 체크포인트
+.ipynb_checkpoints/
+
+# Chroma 벡터 저장소 관련 파일 및 DB
+*.bin
