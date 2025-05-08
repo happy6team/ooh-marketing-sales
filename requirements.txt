@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pandas
+transformers
+accelerate
+langchain
+huggingface_hub
+langchain-teddynote
+python-multipart
+faster-whisper
+langchain-core
+langchain-openai
+langgraph
+chromadb 
+sentence-transformers
