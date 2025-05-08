@@ -91,5 +91,5 @@ def main():
     print(f"벡터스토어가 {persist_directory}에 성공적으로 생성되었습니다.")
     print(f"총 {len(docs)}개의 문서가 저장되었습니다.")
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
