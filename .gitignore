@@ -9,3 +9,17 @@ __pycache__/
 # 기타 시스템 파일
 .DS_Store
 Thumbs.db
+
+# 환경 변수 파일
+.env
+
+# Jupyter Notebook 자동 저장 체크포인트
+.ipynb_checkpoints/
+
+# Chroma 벡터 저장소 관련 파일 및 DB
+*.sqlite3
+*.bin
+chroma_media/
+
+# 프로젝트 루트에 생성된 인덱스 파일 예외 처리 (필요 시)
+!src/data/*.bin  <- 필요한 경우 사용
