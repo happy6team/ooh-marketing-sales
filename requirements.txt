@@ -11,3 +11,5 @@ faster-whisper
 langchain-core
 langchain-openai
 langgraph
+chromadb 
+sentence-transformers
