@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from models.model import Base
+from models.db_model import Base
 
 ASYNC_DB_URL = "mysql+aiomysql://ooh_manager:oohmanager0507@127.0.0.1:3306/oohmarketing?charset=utf8mb4"
 
