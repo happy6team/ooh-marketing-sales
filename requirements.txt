@@ -9,3 +9,5 @@ langchain-teddynote
 python-multipart
 faster-whisper
 langchain-core
+langchain-openai
+langgraph
