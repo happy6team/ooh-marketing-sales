@@ -10,7 +10,7 @@ import pandas as pd
 
 def run_company_media_agent(category, time_filter, manager_name):
 
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    # llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
     state = AgentState(
         brand_list=[],
