@@ -4,10 +4,15 @@ from langchain_teddynote.tools.tavily import TavilySearch
 from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
 from datetime import datetime
-
+from sqlalchemy.ext.asyncio import AsyncSession
 import ast
 import re
-
+import uuid
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from sqlalchemy.exc import SQLAlchemyError
+from models.db_model import Brand  # Brand 모델 import
+from datetime import datetime
 
 search_tool = TavilySearch()
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
@@ -139,3 +144,58 @@ def brand_explorer_agent(state: AgentState) -> AgentState:
         "category" : category, 
         "last_updated_at" : formatted
     }
+
+async def save_brands_to_mariadb(fields: dict, session: AsyncSession):
+    try:
+        saved_brands = []
+
+        for i in range(len(fields.get("brand_list", []))):
+            brand_name = fields["brand_list"][i].strip()
+
+            # 이미 존재하는 브랜드인지 확인
+            stmt = select(Brand).where(Brand.brand_name == brand_name)
+            result = await session.execute(stmt)
+            existing_brand = result.scalars().first()
+
+            if existing_brand:
+                print(f"✅ 이미 존재: {brand_name}")
+                saved_brands.append(existing_brand)
+                continue  # 다음 브랜드로 넘어감
+            
+            # 가장 큰 brand_id 가져오기
+            max_id_stmt = select(func.max(Brand.brand_id))
+            max_id_result = await session.execute(max_id_stmt)
+            max_brand_id = max_id_result.scalar() or 0  # None일 경우 0으로 처리
+            new_brand_id = max_brand_id + 1
+
+            # 새 브랜드 객체 생성
+            new_brand = Brand(
+                brand_id=new_brand_id,
+                subsidiary_id=str(uuid.uuid4()),
+                brand_name=brand_name,
+                main_phone_number=None,
+                manager_email=None,
+                manager_phone_number=None,
+                sales_status=fields["sales_status"],
+                sales_status_note=None,
+                category=fields.get("category", None),
+                core_product_summary=fields["core_product_summary"][i],
+                recent_brand_issues=fields["recent_brand_issues"][i],
+                last_updated_at=fields["last_updated_at"]
+            )
+
+            session.add(new_brand)
+            await session.flush()
+            await session.refresh(new_brand)
+            saved_brands.append(new_brand)
+
+            print(f"✅ 새로 저장: {brand_name}")
+
+        await session.commit()
+        return saved_brands
+
+    except SQLAlchemyError as e:
+        print(f"❌ 오류 발생: {e}")
+        await session.rollback()
+        return None
+    

@@ -12,7 +12,7 @@ class Brand(Base):
     __tablename__ = "brands"
 
     brand_id = Column(Integer, primary_key=True, index=True)
-    subsidiary_id = Column(CHAR(36), default=lambda: str(uuid.uuid4()))
+    subsidiary_id = Column(String(36), default=lambda: str(uuid.uuid4()))
     brand_name = Column(String(255))
     main_phone_number = Column(String(50))
     manager_email = Column(String(255))
