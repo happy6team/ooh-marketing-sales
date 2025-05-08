@@ -1,5 +1,5 @@
 import pandas as pd
-from models.model import Campaign
+from models.db_model import Campaign
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 

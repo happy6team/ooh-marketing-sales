@@ -1,5 +1,5 @@
 import pandas as pd
-from models.model import Media
+from models.db_model import Media
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
