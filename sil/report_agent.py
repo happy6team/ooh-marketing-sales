@@ -125,7 +125,7 @@ vectorstore = Chroma(
     persist_directory="../chroma_db2"   # chroma.sqlite3가 있는 경로
 )
 
-print("✅ 기존 ChromaDB 로드 완료!")
+print("기존 ChromaDB 로드 완료!")
 
 
 # # --- ChromaDB에 campaign_media 데이터 올리기 (최초 1회) ---
@@ -469,6 +469,6 @@ initial_state = {
 
 final_state = proposal_graph.invoke(initial_state)
 
-print("✅ 최종 제안서:\n")
+print("최종 제안서:\n")
 print(final_state["proposal_text"])
-print(f"📄 제안서 Word 파일 경로: {final_state['proposal_file_path']}")
+print(f"제안서 Word 파일 경로: {final_state['proposal_file_path']}")
