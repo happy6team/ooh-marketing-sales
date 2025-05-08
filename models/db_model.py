@@ -3,6 +3,8 @@ from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from datetime import datetime
 import re
+import uuid
+from sqlalchemy.dialects.mysql import CHAR
 
 Base = declarative_base(cls=AsyncAttrs)
 
@@ -10,8 +12,8 @@ class Brand(Base):
     __tablename__ = "brands"
 
     brand_id = Column(Integer, primary_key=True, index=True)
-    subsidiary_id = Column(Integer)
-    brand_name = Column(String(255), nullable=False)
+    subsidiary_id = Column(CHAR(36), default=lambda: str(uuid.uuid4()))
+    brand_name = Column(String(255))
     main_phone_number = Column(String(50))
     manager_email = Column(String(255))
     manager_phone_number = Column(String(50))
@@ -20,7 +22,7 @@ class Brand(Base):
     category = Column(String(100))
     core_product_summary = Column(Text)
     recent_brand_issues = Column(Text)
-    last_updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
+    last_updated_at = Column(DateTime, default=datetime.now, nullable=True)
 
     # 관계 설정
     sales_logs = relationship("SalesLog", back_populates="brand")
@@ -86,43 +88,27 @@ class CampaignMedia(Base):
     campaign = relationship("Campaign", back_populates="campaign_medias", single_parent=True)
     media = relationship("Media", back_populates="campaign_medias")
 
-
 class SalesLog(Base):
     __tablename__ = "sales_logs"
 
     sales_log_id = Column(Integer, primary_key=True, index=True)
     brand_id = Column(Integer, ForeignKey("brands.brand_id"))
-    brand_name = Column(String(255), nullable=False)  # CSV에 있으므로 유지
-    manager_name = Column(String(255), nullable=False)
-    manager_email = Column(String(255), nullable=True)
+    brand_name = Column(String(255))  # CSV에 있으므로 유지
+    manager_name = Column(String(255))
+    manager_email = Column(String(255))
     agent_name = Column(String(255))
     contact_time = Column(DateTime)
     contact_method = Column(String(50))
     call_full_text = Column(Text)  # 새롭게 추가
     call_memo = Column(Text)
     client_needs_summary = Column(Text)
-    
-    # Enum 타입을 사용하여 sales_status 상태값 제한
-    sales_status = Column(String(50), nullable=False)
-    
+    sales_status = Column(String(50))
     proposal_url = Column(String(255))  # 변경된 필드명
     is_proposal_generated = Column(Boolean, default=False)
-    last_updated_at = Column(DateTime, nullable=True)
+    last_updated_at = Column(DateTime)
     remarks = Column(Text)
 
     brand = relationship("Brand", back_populates="sales_logs")
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if self.manager_email:
-            self._validate_email(self.manager_email)
-    
-    def _validate_email(self, email):
-        """간단한 이메일 형식 검증"""
-        email_pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-        if not re.match(email_pattern, email):
-            raise ValueError(f"잘못된 이메일 형식: {email}")
-
 
 class BrandMediaMatch(Base):
     __tablename__ = 'brand_media_matches'
