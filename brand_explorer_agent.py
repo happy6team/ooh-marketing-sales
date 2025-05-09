@@ -38,7 +38,7 @@ def brand_explorer_agent(state: AgentState) -> AgentState:
     prompt_template = PromptTemplate.from_template(""" 
     당신은 전문 브랜드 분석가입니다.
     
-    다음 웹 검색 결과에서 한국 내에서 발생한 {category} 분야의 최신 마케팅 이슈가 있는 브랜드를 최대 10개까지 추출해주세요.
+    다음 웹 검색 결과에서 한국 내에서 발생한 {category} 분야의 최신 마케팅 이슈가 있는 브랜드를 최대 3개까지 추출해주세요.
     
     반드시 아래와 같은 구체적인 한국 내 마케팅 이슈가 있는 브랜드만 추출하세요:
     - 한국에서의 신제품 출시

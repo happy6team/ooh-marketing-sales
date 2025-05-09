@@ -121,3 +121,7 @@ async def save_brands(fields: dict, session: AsyncSession):
 
 async def save_media_matchers(fields: dict, media_fields: dict, session: AsyncSession):
     await save_brand_and_media_match(fields, media_fields, session)
+
+async def save_call_summary(fields: dict, session: AsyncSession):
+    print("실행")
+    await save_to_mariadb_async(fields, session)

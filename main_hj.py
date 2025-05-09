@@ -6,6 +6,7 @@ import sys
 import json
 
 from run_company_media_agent import run_company_media_agent
+from call_summary_agent import run_call_summary_agent
 
 # 페이지 설정
 st.set_page_config(page_title="영업 자동화 대시보드", layout="wide")

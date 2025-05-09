@@ -191,7 +191,6 @@ async def get_or_create_brand(session: AsyncSession, brand_data: dict) -> int | 
         session.add(new_brand)
         await session.flush()  # brand_id 확보
         await session.commit()  # 데이터베이스에 실제 반영
-        session.close()
         return new_brand.brand_id
 
     except SQLAlchemyError as e:
@@ -255,8 +254,3 @@ async def run_call_summary_agent_async():
         await save_to_mariadb_async(extracted_fields, session)
 
     return extracted_fields  # 필요하면 결과 리턴
-
-if __name__ == "__main__":
-    # Use asyncio.run here to start the event loop
-    extracted_fields = asyncio.run(run_call_summary_agent_async())
-    print(extracted_fields)

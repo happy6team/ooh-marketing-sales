@@ -4,7 +4,7 @@ import json
 import datetime
 from typing import TypedDict, Optional
 from langchain_openai import ChatOpenAI
-from langchain_community.vectorstores import Chroma
+# from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph
@@ -17,6 +17,7 @@ import asyncio
 from db import AsyncSessionLocal
 from sqlalchemy.orm import aliased
 from decimal import Decimal
+from langchain_chroma import Chroma
 
 # --- 🔎 상태 정의 ---
 class ProposalState(TypedDict, total=False):
@@ -104,32 +105,53 @@ async def query_brand_and_sales_logs(brand_name: str):
         "SELECT * FROM sales_logs WHERE brand_id = :brand_id ORDER BY contact_time DESC LIMIT 1", 
         {"brand_id": brand_id}
     )
-
-    return brand_info[0], latest_sales_log[0] if latest_sales_log else None
+    print(brand_info)
+    print(brand_id)
+    print(latest_sales_log)
+    return brand_info[0], latest_sales_log[0]
 
 # 브랜드 및 요구 사항 분석
 async def analyze_brand_and_needs(state: ProposalState):
     brand_name = state["brand_name"]
-    brand_info, latest_sales_log = await query_brand_and_sales_logs(brand_name)
-    if not brand_info:
+    brand_row, sales_row = await query_brand_and_sales_logs(brand_name)
+     
+    if brand_row is None:
         raise ValueError(f"브랜드 '{brand_name}' 정보를 찾을 수 없습니다.")
+    
+    # brand_row에서 필요한 정보 추출
+    print(brand_row)
+    print(sales_row)
+    brand_information = {
+        "brand_id": brand_row[0],
+        "brand_name": brand_row[2],
+        "sales_status": brand_row[6] or "상태 정보 없음",
+        "recent_brand_issues": brand_row[10] or "브랜드 이슈 정보 없음"
+    }
 
-    client_needs = latest_sales_log[11] if latest_sales_log else "최근 고객 요구사항 정보 없음"
-    recent_issues = brand_info[10] or "브랜드 이슈 정보 없음"
-    sales_status = brand_info[6] or "상태 정보 없음"
-
-    return {**state, "brand_info": brand_info, "client_needs": client_needs, "recent_issues": recent_issues, "sales_status": sales_status}
-
+    return {
+        **state,
+        "brand_info": brand_information,
+        "client_needs": sales_row[10],
+        "recent_issues": brand_information["recent_brand_issues"],
+        "sales_status": brand_information["sales_status"]
+    }
 # 유사한 캠페인 사례 검색
 async def retrieve_previous_campaigns(state: ProposalState):
     client_needs = state.get("client_needs") or "옥외 광고 집행 사례"
     similar_cases = vectordb_search_tool(client_needs, vectorstore)
     return {**state, "previous_campaigns": similar_cases}
 
+async def db_query_tool_async_b(query: str, params: dict = None):
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            result = await session.execute(text(query), params or {})
+            rows = result.fetchall()
+            return [dict(row._mapping) for row in rows]
+
 # 매체 추천
 async def recommend_media(state: ProposalState):
     client_needs = state.get("client_needs") or ""
-    db_results = await db_query_tool_async("SELECT * FROM medias WHERE quantity > 0;")
+    db_results = await db_query_tool_async_b("SELECT * FROM medias WHERE quantity > 0;")
     if not db_results:
         raise ValueError("사용 가능한 매체 정보가 없습니다.")
     
@@ -144,24 +166,31 @@ async def recommend_media(state: ProposalState):
         다음은 사용 가능한 매체 리스트입니다:
         {media_json}
     """
-    recommendation = llm.invoke(prompt)
+    recommendation = await llm.ainvoke(prompt)
     return {**state, "recommended_media": recommendation.content, "media_info": db_results}
 
-# 제안서 생성
-async def generate_proposal(state: ProposalState):
+def generate_proposal(state: ProposalState):
+    import datetime
+    import re
     doc = Document()
     doc.add_heading(f"{state['brand_name']} 옥외 광고 제안서", level=1)
 
     doc.add_heading("1. 고객사 정보", level=2)
-    for key, value in state["brand_info"].items():
-        doc.add_paragraph(f"- {key}: {value}")
+    brand_info = state["brand_info"]
+    if isinstance(brand_info, dict):
+        for key, value in brand_info.items():
+            doc.add_paragraph(f"- {key}: {value}")
 
     doc.add_heading("2. 캠페인 목표", level=2)
-    for item in state["client_needs"].split(","):
-        doc.add_paragraph(f"- {item.strip()}")
+    client_needs = state["client_needs"]
+    for item in re.split(r",|·|•", client_needs):
+        if item.strip():
+            doc.add_paragraph(f"- {item.strip()}")
 
     doc.add_heading("3. 유사 집행 사례", level=2)
-    for idx, case in enumerate(state["previous_campaigns"].split("\n\n---\n\n"), 1):
+    previous_campaigns = state["previous_campaigns"]
+    cases = previous_campaigns.split("\n\n---\n\n")
+    for idx, case in enumerate(cases, 1):
         doc.add_paragraph(f"- 사례 {idx}: {case}")
 
     doc.add_heading("4. 추천매체 및 집행계획", level=2)
@@ -175,11 +204,14 @@ async def generate_proposal(state: ProposalState):
 
     위 정보를 바탕으로 제안서의 마무리 결론 부분을 작성하세요.
     """)
-    conclusion = prompt | llm.invoke(state).content
+    chain = prompt | llm
+    conclusion = chain.invoke(state).content
     doc.add_paragraph(conclusion)
 
-    file_name = f"{state['brand_name']}_제안서_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+    now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_name = f"{state['brand_name']}_제안서_{now}.docx"
     doc.save(file_name)
+
     return {**state, "proposal_text": conclusion, "proposal_file_path": file_name}
 
 # 그래프 구성
@@ -206,5 +238,16 @@ if __name__ == "__main__":
     initial_state = {"brand_name": args.brand}
     final_state = asyncio.run(proposal_graph.ainvoke(initial_state))
 
-    print("최종 제안서:", final_state["proposal_text"])
-    print(f"제안서 Word 파일 경로: {final_state['proposal_file_path']}")
+    import sys
+    print("최종 제안서:\n", file=sys.stderr)
+    print(final_state["proposal_text"], file=sys.stderr)
+    print(f"제안서 Word 파일 경로: {final_state['proposal_file_path']}", file=sys.stderr)
+
+
+    result = {
+        "success": True,
+        "brand": initial_state["brand_name"],
+        "file_path": final_state["proposal_file_path"],
+        "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    print(json.dumps(result))
