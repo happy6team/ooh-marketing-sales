@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -22,6 +23,7 @@ if 'initialized' not in st.session_state:
     st.session_state.show_email_modal = False
     st.session_state.expanded_company = None  # 현재 확장된 회사 인덱스
     st.session_state.call_summary = {} 
+    st.session_state.proposal_files = {}  
 
 # 영업 단계 목록 (단순화)
 SALES_STATUS = ["미접촉", "접촉 완료", "제안서 발송", "협의 중", "진행 완료", "영업 실패", "보류"]
@@ -82,14 +84,72 @@ if st.sidebar.button("🏢 기업 리스트 업데이트", use_container_width=T
         st.session_state.company_data = df.copy()
         st.sidebar.success("기업 리스트가 성공적으로 업데이트되었습니다!")
 
-# 제안서 생성 함수 - 영업 단계 변경하지 않음
+# 제안서 생성 함수 - report_agent 연동
 def generate_proposal(idx):
-    if idx is not None:
-        # 실제로는 report_agent.py와 email_agent.py를 호출
-        st.session_state.proposal_generated[idx] = True
-        st.session_state.email_script_generated[idx] = True
-        return True
-    return False
+    """
+    선택한 기업의 정보를 기반으로 제안서를 생성합니다.
+    
+    Args:
+        idx: 기업 인덱스
+        
+    Returns:
+        성공 여부(True/False)
+    """
+    if idx is None or st.session_state.company_data is None:
+        return False
+    
+    try:
+        # 진행 상태 표시
+        with st.spinner("제안서를 생성하는 중입니다... 잠시만 기다려주세요 🙏"):
+            # 브랜드 정보 수집
+            brand_name = st.session_state.company_data.loc[idx, 'brand_list']
+            category = st.session_state.company_data.loc[idx, 'category']
+            core_product_summary = st.session_state.company_data.loc[idx, 'core_product_summary']
+            recent_brand_issues = st.session_state.company_data.loc[idx, 'recent_brand_issues']
+            
+            # 추천 매체 정보
+            matched_media = st.session_state.company_data.loc[idx, 'matched_media'] if 'matched_media' in st.session_state.company_data.columns else None
+            match_reason = st.session_state.company_data.loc[idx, 'match_reason'] if 'match_reason' in st.session_state.company_data.columns else None
+            
+            # 고객 요구사항 - 통화 요약에서 가져오기
+            client_needs = None
+            if idx in st.session_state.call_summary and 'client_needs_summary' in st.session_state.call_summary[idx]:
+                client_needs = st.session_state.call_summary[idx]['client_needs_summary']
+            
+            # report_agent 호출
+            from report_agent_jy import create_proposal_for_brand
+            result = create_proposal_for_brand(
+                brand_name=brand_name,
+                category=category,
+                recent_issues=recent_brand_issues,
+                core_product_summary=core_product_summary,
+                matched_media=matched_media,
+                match_reason=match_reason,
+                client_needs=client_needs
+            )
+            
+            if result['success']:
+                # 세션 상태 업데이트
+                st.session_state.proposal_generated[idx] = True
+                
+                # 파일 경로 저장
+                if 'proposal_files' not in st.session_state:
+                    st.session_state.proposal_files = {}
+                st.session_state.proposal_files[idx] = result['file_path']
+                
+                # 이메일 스크립트 생성 플래그 업데이트
+                st.session_state.email_script_generated[idx] = True
+                
+                # 성공 메시지 표시
+                st.success(f"제안서가 성공적으로 생성되었습니다: {os.path.basename(result['file_path'])}")
+                return True
+            else:
+                st.error(f"제안서 생성 중 오류가 발생했습니다: {result.get('error', '알 수 없는 오류')}")
+                return False
+                
+    except Exception as e:
+        st.error(f"제안서 생성 중 예상치 못한 오류가 발생했습니다: {str(e)}")
+        return False
 
 # 전화 걸기 다이얼로그 함수
 @st.dialog("전화 스크립트")
@@ -200,42 +260,63 @@ def show_email_dialog(idx):
     brand_name = working_df.loc[idx, 'brand_list']
     manager_email = working_df.loc[idx, 'manager_email'] if not pd.isna(working_df.loc[idx, 'manager_email']) else ""
     
-    # 이메일 스크립트 (proposal_email 열에서 가져옴)
-    email_script = working_df.loc[idx, 'proposal_email'] if 'proposal_email' in working_df.columns and not pd.isna(working_df.loc[idx, 'proposal_email']) else f"""
-안녕하세요.  
-옥외광고 매체사 <올이즈굿>의 광고팀 {selected_담당자} 매니저입니다.
-{brand_name}에 적합한 옥외광고를 소개해 드리고자 메일을 남기게 되었습니다.
-
-첨부된 소개서에서 관련 매체들을 확인하실 수 있습니다.  
-확인 후 회신 주시면, 전화나 미팅을 통해 더 자세히 안내해 드리겠습니다 :)
-긴 메일 읽어주셔서 감사합니다.  
-올이즈굿 {selected_담당자} 드림
-    """
+    # 제안서 파일 경로 확인
+    proposal_filename = f"{brand_name}_제안서.pdf"
+    if 'proposal_files' in st.session_state and idx in st.session_state.proposal_files:
+        proposal_filepath = st.session_state.proposal_files[idx]
+        proposal_filename = os.path.basename(proposal_filepath)
     
     st.markdown(f"### {brand_name} 담당자에게 이메일 발송")
     
-    # 제안서 파일명 (예시)
-    proposal_filename = f"{brand_name}_제안서.pdf"
-    st.write(f"첨부 파일: {proposal_filename}")
+    # 첨부 파일 정보 표시
+    st.text(f"첨부 파일: {proposal_filename}")
     
-    # 수신자 이메일을 이메일 내용 위에 배치
+    # 수신자 이메일 입력
     recipient_email = st.text_input("수신자 이메일", value=manager_email, key=f"recipient_email_{idx}")
+    
+    # 이메일 내용
+    default_email = f"""안녕하세요.  
+옥외광고 매체사 <올이즈굿>의 광고팀 {selected_담당자} 매니저입니다.
+
+{brand_name}에 적합한 옥외광고인  
+{working_df.loc[idx, 'matched_media']}를 소개해 드리고자 메일을 남기게 되었습니다.
+
+{working_df.loc[idx, 'matched_media']}은 월평균 약 185만명의 여객 수를 기록하고 있어, 다양한 연령대(20-60대)의 고객층에게 도달할 수 있는 기회를 제공합니다.
+
+첨부된 소개서에서 관련 매체들을 확인하실 수 있습니다.  
+확인 후 회신 주시면, 전화나 미팅을 통해 더 자세히 안내해 드리겠습니다 :)
+
+긴 메일 읽어주셔서 감사합니다.  
+올이즈굿 {selected_담당자} 드림
+"""
+    
+    email_script = working_df.loc[idx, 'proposal_email'] if 'proposal_email' in working_df.columns and not pd.isna(working_df.loc[idx, 'proposal_email']) else default_email
     
     st.text_area("이메일 내용", email_script, height=300, key=f"email_content_{idx}")
     
     col1, col2 = st.columns(2)
     with col1:
-        # 다이얼로그 내의 버튼에 고유한 키 할당
+        # 취소 버튼
         if st.button("취소", key=f"email_dialog_cancel_{idx}", use_container_width=True):
             st.rerun()
     with col2:
-        # 다이얼로그 내의 버튼에 고유한 키 할당
+        # 이메일 발송 버튼
         if st.button("이메일 발송", key=f"email_dialog_send_{idx}", type="primary", use_container_width=True):
-            st.session_state.email_sent[idx] = True
-            st.success(f"{recipient_email}로 이메일이 성공적으로 발송되었습니다.")
-            # 이메일 발송 시 영업 단계를 "제안서 발송"으로 업데이트
+            # 이메일 발송 처리
+            if 'proposal_files' in st.session_state and idx in st.session_state.proposal_files:
+                file_path = st.session_state.proposal_files[idx]
+                # 여기서 실제 이메일 발송 코드가 들어갈 수 있습니다
+                st.session_state.email_sent[idx] = True
+                st.success(f"{recipient_email}로 이메일이 성공적으로 발송되었습니다.")
+            else:
+                st.session_state.email_sent[idx] = True
+                st.warning(f"{recipient_email}로 이메일이 발송되었습니다. (제안서 파일 첨부 없음)")
+            
+            # 영업 단계 업데이트
             st.session_state.company_data.loc[idx, 'sales_status'] = "제안서 발송"
             st.rerun()
+
+
 
 # 작업할 데이터 설정 및 표시
 if st.session_state.company_data is not None:
@@ -354,13 +435,15 @@ if st.session_state.company_data is not None:
                                 if not call_completed:
                                     show_call_dialog(i)
 
+
                         with b2:
                             call_completed = i in st.session_state.call_completed and st.session_state.call_completed[i]
                             has_summary = i in st.session_state.call_summary
                             
                             if call_completed:
-                                summary_button_type = "primary" if has_summary else "secondary"
-                                if st.button("통화 요약", key=f"summary_btn_{i}", type=summary_button_type):
+                                # 여기를 수정: summary_button_type 제거하고 체크 표시 추가
+                                summary_button_label = "✓ 통화 요약" if has_summary else "통화 요약"
+                                if st.button(summary_button_label, key=f"summary_btn_{i}"):
                                     show_call_summary_dialog(i)
                             else:
                                 st.button("통화 요약", key=f"summary_disabled_{i}", disabled=True)
