@@ -67,7 +67,7 @@ if st.sidebar.button("🏢 기업 리스트 업데이트", use_container_width=T
         # df = run_company_media_agent(selected_카테고리, date_range, selected_담당자)
         
         # 테스트를 위해 파일에서 데이터 로드
-        df = pd.read_csv("output_match.csv")
+        df = pd.read_csv("output_match2.csv")
         
         # 기존 데이터에 담당자 정보 컬럼이 없다면 추가
         if "manager_name" not in df.columns:
