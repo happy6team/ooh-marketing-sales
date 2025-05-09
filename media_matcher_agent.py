@@ -6,8 +6,6 @@ import torch
 import numpy as np
 from datetime import datetime
 
-
-
 # BERT 임베딩 클래스 재정의 (쿼리용)
 class BERTSentenceEmbedding:
     def __init__(self, model_name="sentence-transformers/all-MiniLM-L6-v2"):
