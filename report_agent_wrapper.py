@@ -28,7 +28,8 @@ if not brand_name:
 # --- 환경변수 설정 ---
 load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "")
-
+import logging
+DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 # --- 파일 존재 확인 ---
 if not os.path.exists("report_agent.py"):
     print(json.dumps({
@@ -42,11 +43,11 @@ try:
     cmd = [sys.executable, "report_agent.py", f"--brand={brand_name}"]
     result = subprocess.run(cmd, capture_output=True, text=True)
 
-    # 디버깅용 로그
-    print("=== STDOUT ===")
-    print(result.stdout)
-    print("=== STDERR ===")
-    print(result.stderr)
+    if DEBUG:
+        print("=== STDOUT ===", file=sys.stderr)
+        print(result.stdout, file=sys.stderr)
+        print("=== STDERR ===", file=sys.stderr)
+        print(result.stderr, file=sys.stderr)
 
     # 결과 JSON 파싱 시도
     json_result = None
