@@ -103,7 +103,7 @@ def show_call_dialog(idx):
     st.markdown(f"### {brand_name} 담당자와의 통화 스크립트")
     st.markdown(f"{call_script}")
     
-    # 버튼 컬럼 2개로 수정 (3개에서 변경)
+    # 버튼 컬럼 2개로 수정
     col1, col2 = st.columns(2)
     with col1:
         # 다이얼로그 내의 버튼에 고유한 키 할당
@@ -112,11 +112,11 @@ def show_call_dialog(idx):
     with col2:
         # 다이얼로그 내의 버튼에 고유한 키 할당
         if st.button("통화 완료", key=f"dialog_complete_{idx}", type="primary", use_container_width=True):
+            # 통화 완료 상태 표시 및 영업 단계 업데이트
             st.session_state.call_completed[idx] = True
-            # 통화 완료 시 영업 단계를 "접촉 완료"로 업데이트
             st.session_state.company_data.loc[idx, 'sales_status'] = "접촉 완료"
             
-            # 통화 완료 버튼 클릭 시 비동기적으로 음성 분석 진행
+            # 비동기 처리 플래그만 설정 (실제 처리는 따로 수행)
             st.session_state[f"processing_call_{idx}"] = True
             st.rerun()
 
@@ -155,12 +155,13 @@ def show_call_summary_dialog(idx):
         if st.button("닫기", key=f"summary_close_{idx}", use_container_width=True):
             st.rerun()
 
-# 통화 요약 처리 함수 (신규 추가)
+# 통화 요약 처리 함수 (스피너 유지)
 def process_call_summary(idx):
     """
     통화 내용을 처리하고 요약하는 함수
     """
     if idx is not None and st.session_state.company_data is not None:
+        # 스피너 유지 (실제 처리가 이루어지는 부분)
         with st.spinner("통화 내용을 분석 중입니다..."):
             brand_name = st.session_state.company_data.loc[idx, 'brand_list']
             
@@ -188,6 +189,7 @@ def process_call_summary(idx):
             
             return call_data
     return None
+
 
 # 이메일 다이얼로그 함수
 @st.dialog("이메일 스크립트")
@@ -276,17 +278,18 @@ if st.session_state.company_data is not None:
                         else:
                             st.session_state.expanded_company = i
                         st.rerun()
-        
+
+
                 # 확장된 회사 정보 표시
                 if st.session_state.expanded_company == i:
-                    # 비동기 처리 확인 및 처리
+                    # 비동기 처리 확인 및 처리 (스피너 없음)
                     processing_key = f"processing_call_{i}"
                     if processing_key in st.session_state and st.session_state[processing_key]:
-                        with st.spinner("통화 내용을 분석 중입니다..."):
-                            process_call_summary(i)
-                            # 처리 완료 후 플래그 제거
-                            st.session_state.pop(processing_key, None)
-                            st.rerun()
+                        # 스피너 없이 통화 요약 처리 함수 호출 (함수 내부에 스피너 있음)
+                        process_call_summary(i)
+                        # 처리 완료 후 플래그 제거
+                        st.session_state.pop(processing_key, None)
+                        st.rerun()
                     
                     st.info(f"""
                         **카테고리:** {working_df.loc[i, "category"]}  
@@ -294,7 +297,8 @@ if st.session_state.company_data is not None:
                         **추천 매체:** {working_df.loc[i, "matched_media"]}  
                         **추천 이유:** {working_df.loc[i, "match_reason"]}  
                     """)
-        
+
+
                     with st.container():
                         col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
         
