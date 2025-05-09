@@ -1,4 +1,7 @@
+import json
 import os
+import subprocess
+import sys
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -86,70 +89,81 @@ if st.sidebar.button("🏢 기업 리스트 업데이트", use_container_width=T
 
 # 제안서 생성 함수 - report_agent 연동
 def generate_proposal(idx):
-    """
-    선택한 기업의 정보를 기반으로 제안서를 생성합니다.
-    
-    Args:
-        idx: 기업 인덱스
-        
-    Returns:
-        성공 여부(True/False)
-    """
-    if idx is None or st.session_state.company_data is None:
-        return False
-    
+    if idx is None or st.session_state.company_data is None or st.session_state.company_data.empty:
+        st.error("⚠️ 회사 정보가 없습니다.")
+        return False, "회사 정보 없음"
+
+    brand = st.session_state.company_data.loc[idx, 'brand_list']
+    issue = st.session_state.company_data.loc[idx, 'recent_brand_issues']
+
+    st.warning(f"📣 제안서 생성 시작: {brand}")
+    # st.session_state.proposal_generated[idx] = True
+    # st.session_state.email_script_generated[idx] = True
+
     try:
-        # 진행 상태 표시
-        with st.spinner("제안서를 생성하는 중입니다... 잠시만 기다려주세요 🙏"):
-            # 브랜드 정보 수집
-            brand_name = st.session_state.company_data.loc[idx, 'brand_list']
-            category = st.session_state.company_data.loc[idx, 'category']
-            core_product_summary = st.session_state.company_data.loc[idx, 'core_product_summary']
-            recent_brand_issues = st.session_state.company_data.loc[idx, 'recent_brand_issues']
-            
-            # 추천 매체 정보
-            matched_media = st.session_state.company_data.loc[idx, 'matched_media'] if 'matched_media' in st.session_state.company_data.columns else None
-            match_reason = st.session_state.company_data.loc[idx, 'match_reason'] if 'match_reason' in st.session_state.company_data.columns else None
-            
-            # 고객 요구사항 - 통화 요약에서 가져오기
-            client_needs = None
-            if idx in st.session_state.call_summary and 'client_needs_summary' in st.session_state.call_summary[idx]:
-                client_needs = st.session_state.call_summary[idx]['client_needs_summary']
-            
-            # report_agent 호출
-            from report_agent_jy import create_proposal_for_brand
-            result = create_proposal_for_brand(
-                brand_name=brand_name,
-                category=category,
-                recent_issues=recent_brand_issues,
-                core_product_summary=core_product_summary,
-                matched_media=matched_media,
-                match_reason=match_reason,
-                client_needs=client_needs
+        with st.spinner(f"{brand} 제안서 생성 중..."):
+            cmd = [
+                sys.executable,
+                "report_agent_wrapper.py",
+                f"--brand={brand}",
+                f"--issue={issue}"
+            ]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=900
             )
-            
-            if result['success']:
-                # 세션 상태 업데이트
-                st.session_state.proposal_generated[idx] = True
-                
-                # 파일 경로 저장
-                if 'proposal_files' not in st.session_state:
-                    st.session_state.proposal_files = {}
-                st.session_state.proposal_files[idx] = result['file_path']
-                
-                # 이메일 스크립트 생성 플래그 업데이트
-                st.session_state.email_script_generated[idx] = True
-                
-                # 성공 메시지 표시
-                st.success(f"제안서가 성공적으로 생성되었습니다: {os.path.basename(result['file_path'])}")
-                return True
+
+            with st.expander("제안서 생성 로그", expanded=False):
+                st.subheader("표준 출력:")
+                st.code(result.stdout)
+                if result.stderr:
+                    st.subheader("오류 출력:")
+                    st.code(result.stderr)
+
+            if result.returncode == 0:
+                json_result = None
+                for line in result.stdout.split('\n'):
+                    if line.strip().startswith('{') and line.strip().endswith('}'):
+                        try:
+                            json_result = json.loads(line.strip())
+                            break
+                        except json.JSONDecodeError:
+                            continue
+
+                if json_result and json_result.get("success"):
+                    st.session_state.proposal_generated[idx] = True
+                    st.session_state.email_script_generated[idx] = True
+
+                    file_path = json_result.get("file_path", "")
+                    if file_path and os.path.exists(file_path):
+                        st.success(f"✅ 제안서가 생성되었습니다: {file_path}")
+                        with open(file_path, "rb") as file:
+                            st.download_button(
+                                label="📄 제안서 다운로드",
+                                data=file,
+                                file_name=os.path.basename(file_path),
+                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            )
+                    st.rerun()
+                    return True, "성공"
+                else:
+                    st.error("❌ JSON 결과가 없거나 실패했습니다.")
+                    return False, "JSON 결과 없음"
             else:
-                st.error(f"제안서 생성 중 오류가 발생했습니다: {result.get('error', '알 수 없는 오류')}")
-                return False
-                
+                st.error(f"❌ wrapper 실행 실패: 종료 코드 {result.returncode}")
+                print("실행코드 종료", result.returncode)
+                return False, f"실패: 종료 코드 {result.returncode}"
+    except subprocess.TimeoutExpired:
+        st.error("⏰ 제안서 생성 시간이 초과되었습니다.")
+        return False, "시간 초과"
+
     except Exception as e:
-        st.error(f"제안서 생성 중 예상치 못한 오류가 발생했습니다: {str(e)}")
-        return False
+        st.error(f"❌ 예외 발생: {e}")
+        return False, str(e)
+
 
 # 전화 걸기 다이얼로그 함수
 @st.dialog("전화 스크립트")
@@ -419,7 +433,7 @@ if st.session_state.company_data is not None:
                             )
                     
                     # 버튼들을 오른쪽 하단에 한 줄로 배치
-                    _, _, button_col = st.columns([2, 2, 3])
+                    _, _, button_col = st.columns([1, 1, 2])
                     
                     with button_col:
                         # 버튼들을 한 줄에 배치
