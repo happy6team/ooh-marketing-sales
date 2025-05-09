@@ -4,7 +4,6 @@ from langchain_teddynote.tools.tavily import TavilySearch
 from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
 from datetime import datetime
-
 import ast
 import re
 from dotenv import load_dotenv
@@ -13,22 +12,13 @@ load_dotenv()
 search_tool = TavilySearch()
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
-
 def brand_explorer_agent(state: AgentState) -> AgentState:
     """
     패션 브랜드의 최신 마케팅 이슈를 탐색하는 에이전트
-    
-    Args:
-        state: 입력 상태(비어있을 수 있음)
-        
-    Returns:
-        brand_list, recent_brand_issues, core_product_summary이 포함된 업데이트된 AgentState
     """
-
     category = state["category"]
     time_filter = state["time_filter"]
 
-    
     # 더 다양한 결과를 위해 여러 검색 쿼리 실행
     search_queries = [
         f"국내 {category} 브랜드 {time_filter} 팝업스토어 이슈 뉴스",
@@ -45,7 +35,7 @@ def brand_explorer_agent(state: AgentState) -> AgentState:
         all_web_content += result_str + "\n\n=== 다음 검색 결과 ===\n\n"
     
     # 프롬프트 템플릿 생성
-    prompt_template = PromptTemplate.from_template("""
+    prompt_template = PromptTemplate.from_template(""" 
     당신은 전문 브랜드 분석가입니다.
     
     다음 웹 검색 결과에서 한국 내에서 발생한 {category} 분야의 최신 마케팅 이슈가 있는 브랜드를 최대 10개까지 추출해주세요.
@@ -55,16 +45,15 @@ def brand_explorer_agent(state: AgentState) -> AgentState:
     - 앰배서더 또는 광고 모델 발표
     - 한국 내 팝업스토어 오픈 (서울, 부산 등 국내 도시에서 진행)
     - 브랜드/인물과의 콜라보레이션
-    - 한국 소비자를 대상으로 한 마케팅 캠페인                                               
-    
+    - 한국 소비자를 대상으로 한 마케팅 캠페인
+
     중요: 반드시 정식 패션 브랜드만 포함해야 합니다. 다음 기준을 만족해야 합니다:
     - 의류, 신발, 액세서리 등을 생산/판매하는 패션 브랜드여야 함
     - 실제 존재하는 패션 브랜드여야 함
     - 게임 캐릭터, 연예인, 아이돌, 가상 인물은 제외
     - 패션 브랜드가 아닌 팝업스토어 주최자는 제외
-    
+
     반드시 다음 조건을 준수하세요:
-    
     1. 실제 검색 결과에서 확인된 최신 이슈만 포함하세요.
     2. 각 브랜드마다 최대한 서로 다른 날짜의 이슈를 찾으세요. 
     3. 날짜를 찾을 수 없는 경우 '날짜 미상'이라고 표시하고, 절대로 임의의 날짜를 생성하지 마세요.
@@ -94,29 +83,26 @@ def brand_explorer_agent(state: AgentState) -> AgentState:
     try:
         # 응답에서 코드 블록 제거 (있는 경우)
         content = response.content
-        # 코드 블록이 있는 경우 제거
         if "```" in content:
-            # 정규식으로 코드 블록 안의 내용만 추출
             pattern = r"```(?:python)?\s*([\s\S]*?)```"
             matches = re.findall(pattern, content)
             if matches:
                 content = matches[0].strip()
             else:
-                # 코드 블록 마커를 단순히 제거
                 content = content.replace("```python", "").replace("```", "").strip()
         
         # 응답 파싱
         brand_data = ast.literal_eval(content)
-        
+
         # 리스트가 아니면 오류 처리
         if not isinstance(brand_data, list):
             raise ValueError("응답이 리스트가 아님")
-        
+
         # 결과 분리하여 준비
         brand_names = [item["name"] for item in brand_data]
         recent_brand_issues = [item["issue"] for item in brand_data]
         core_product_summarys = [item["description"] for item in brand_data]
-        
+
     except Exception as e:
         print(f"⚠️ 응답 파싱 실패: {e}")
         print(f"원본 응답: {response.content}")
@@ -128,15 +114,12 @@ def brand_explorer_agent(state: AgentState) -> AgentState:
     now = datetime.now()
     formatted = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    
-    
     # 결과 업데이트
-    return {
-        "brand_list": brand_names,
-        "recent_brand_issues": recent_brand_issues,
-        "core_product_summary": core_product_summarys, 
-
-        "sales_status": "미접촉", 
-        "category" : category, 
-        "last_updated_at" : formatted
-    }
+    return AgentState(
+        brand_list=brand_names,
+        recent_brand_issues=recent_brand_issues,
+        core_product_summary=core_product_summarys,
+        sales_status="미접촉", 
+        category=category, 
+        last_updated_at=formatted
+    )
