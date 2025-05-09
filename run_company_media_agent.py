@@ -47,7 +47,7 @@ async def run_company_media_agent_async(category, time_filter, manager_name):
                 "category": category,
                 "core_product_summary": core_product_summary,
                 "recent_brand_issues": recent_issue
-            }, match_data, session=session)
+            }, match_data, session)
 
             df.loc[i, 'matched_media'] = match_data['media_name']
             df.loc[i, 'media_location'] = match_data['location']

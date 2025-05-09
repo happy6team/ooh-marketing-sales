@@ -116,8 +116,8 @@ async def match_media_prototype(session: AsyncSession = Depends(get_db)):
 
 # ------
 
-async def save_brands(fields: dict, session: AsyncSession = Depends(get_db)):
+async def save_brands(fields: dict, session: AsyncSession):
     await save_brands_to_mariadb(fields, session)
 
-async def save_media_matchers (fields: dict, session: AsyncSession = Depends(get_db)):
-    await save_brand_and_media_match(fields, session)
+async def save_media_matchers(fields: dict, media_fields: dict, session: AsyncSession):
+    await save_brand_and_media_match(fields, media_fields, session)
