@@ -32,7 +32,7 @@ class BERTSentenceEmbedding:
         cls_embedding = outputs.last_hidden_state[:, 0, :].squeeze(0)
         return cls_embedding.cpu().numpy().tolist()
 
-def load_vectorstore(persist_directory="./chroma_media", collection_name="media"):
+def load_vectorstore(persist_directory="../chroma_media", collection_name="media"):
     # 임베딩 함수 초기화 (쿼리용)
     embedding_function = BERTSentenceEmbedding()
     
@@ -45,7 +45,7 @@ def load_vectorstore(persist_directory="./chroma_media", collection_name="media"
     
     return chroma_collection
 
-def media_matcher_agent(brand_name, recent_issue, core_product_summary, manager_name, persist_directory="./chroma_media"):
+def media_matcher_agent(brand_name, recent_issue, core_product_summary, manager_name, persist_directory="../chroma_media"):
     # LLM 초기화
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     

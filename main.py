@@ -18,7 +18,7 @@ async def startup_event():
         raise e
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from hyoJ.prototype import CallingState, run, save_to_mariadb_async
+from hyoJ.call_summary_agent import CallingState, run, save_to_mariadb_async
 @app.get("/process_call_data")
 async def process_call_data(session: AsyncSession = Depends(get_db)):
     state = CallingState(
