@@ -18,9 +18,9 @@ async def startup_event():
         raise e
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from hyoJ.call_summary_agent import CallingState, run, save_to_mariadb_async
+from hyoJ.call_summary_agent_proto import CallingState, run, save_to_mariadb_async
 @app.get("/process_call_data")
-async def process_call_data(session: AsyncSession = Depends(get_db)):
+async def process_call_data_prototype(session: AsyncSession = Depends(get_db)):
     state = CallingState(
         full_text="",
         summary="",
@@ -37,10 +37,10 @@ async def process_call_data(session: AsyncSession = Depends(get_db)):
 
 
 from AgentState import AgentState
-from hyoJ.brand_explorer_agent import brand_explorer_agent, save_brands_to_mariadb  # 에이전트 로직
+from hyoJ.brand_explorer_agent_proto import brand_explorer_agent, save_brands_to_mariadb  # 에이전트 로직
  
 @app.get("/process_brands")
-async def process_brands(session: AsyncSession = Depends(get_db)):
+async def process_brands_prototype(session: AsyncSession = Depends(get_db)):
     # 👉 에이전트에 전달할 입력 상태 설정
     state = AgentState(
         category="패션",           # 또는 요청 파라미터로 받을 수도 있음
@@ -59,10 +59,10 @@ async def process_brands(session: AsyncSession = Depends(get_db)):
         "brand_names": fields["brand_list"]
     }
 
-from hyoJ.media_matcher_agent import media_matcher_agent, save_brand_and_media_match
+from hyoJ.media_matcher_agent_proto import media_matcher_agent, save_brand_and_media_match
 
 @app.get("/match_media")
-async def match_media(session: AsyncSession = Depends(get_db)):
+async def match_media_prototype(session: AsyncSession = Depends(get_db)):
     
     fields = {
         "brand_list": ["브랜드1", "브랜드2", "브랜드3"],
@@ -113,3 +113,11 @@ async def match_media(session: AsyncSession = Depends(get_db)):
         "matched_count": sum(1 for r in saved_matches if r),
         "matched_brand_names": fields["brand_list"]
     }
+
+# ------
+
+async def save_brands(fields: dict, session: AsyncSession = Depends(get_db)):
+    await save_brands_to_mariadb(fields, session)
+
+async def save_media_matchers (fields: dict, session: AsyncSession = Depends(get_db)):
+    await save_brand_and_media_match(fields, session)

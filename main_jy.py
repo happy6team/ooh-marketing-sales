@@ -62,10 +62,10 @@ date_range = st.sidebar.date_input(
 if st.sidebar.button("🏢 기업 리스트 업데이트", use_container_width=True):
     # 실제 에이전트 실행을 통해 데이터 생성
     with st.spinner("브랜드 리스트업 중... 잠시만 기다려주세요 🙏"):
-        # df = run_company_media_agent(selected_카테고리, date_range, selected_담당자)
+        df = run_company_media_agent(selected_카테고리, date_range, selected_담당자)
         
         # 테스트를 위해 파일에서 데이터 로드
-        df = pd.read_csv("output_match.csv")
+        # df = pd.read_csv("output_match.csv")
         
         # 기존 데이터에 담당자 정보 컬럼이 없다면 추가
         if "manager_name" not in df.columns:
