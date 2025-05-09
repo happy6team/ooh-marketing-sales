@@ -24,11 +24,11 @@ class BERTSentenceEmbedding:
         with torch.no_grad():
             outputs = self.model(**inputs)
         cls_embedding = outputs.last_hidden_state[:, 0, :].squeeze(0)
-        return cls_embedding.cpu().numpy()
+        return cls_embedding.cpu().numpy().tolist()
 
 def main():
     # CSV 파일 경로
-    file_path = "../data/data_sample/media.csv"
+    file_path = "data/data_sample/media.csv"
     
     # CSV 파일 로드
     df = pd.read_csv(file_path, header=None)
