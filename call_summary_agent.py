@@ -19,6 +19,10 @@ from models.db_model import Brand
 from datetime import datetime
 import uuid
 
+import asyncio
+
+from db import AsyncSessionLocal
+
 # 1️⃣ FastAPI 앱 및 DB 세팅
 load_dotenv()
 
@@ -197,37 +201,62 @@ async def get_or_create_brand(session: AsyncSession, brand_data: dict) -> int | 
 
 # 8️⃣ 비동기적으로 MariaDB에 데이터 저장
 async def save_to_mariadb_async(fields: dict, session: AsyncSession):
-    new_log = SalesLog(
-        brand_id=await get_or_create_brand(session, fields),
-        brand_name=fields["brand_name"],
-        manager_name=fields["manager_name"],
-        manager_email=fields["manager_email"],
-        agent_name=fields["agent_name"],
-        call_full_text=fields["call_full_text"],
-        call_memo=fields["call_memo"],
-        proposal_url=fields["proposal_url"],
-        is_proposal_generated=fields["is_proposal_generated"],
-        remarks=fields["remarks"],
-        contact_time=fields["contact_time"],
-        last_updated_at=fields["last_updated_at"],
-        contact_method=fields["contact_method"],
-        sales_status=fields["sales_status"],
-        client_needs_summary=fields["client_needs_summary"]
-    )
+    try:
+        new_log = SalesLog(
+            brand_id=await get_or_create_brand(session, fields),
+            brand_name=fields["brand_name"],
+            manager_name=fields["manager_name"],
+            manager_email=fields["manager_email"],
+            agent_name=fields["agent_name"],
+            call_full_text=fields["call_full_text"],
+            call_memo=fields["call_memo"],
+            proposal_url=fields["proposal_url"],
+            is_proposal_generated=fields["is_proposal_generated"],
+            remarks=fields["remarks"],
+            contact_time=fields["contact_time"],
+            last_updated_at=fields["last_updated_at"],
+            contact_method=fields["contact_method"],
+            sales_status=fields["sales_status"],
+            client_needs_summary=fields["client_needs_summary"]
+        )
 
-    session.add(new_log)
-    await session.commit()
-    print("✅ [Async] sales_log 테이블에 데이터 저장 완료")
-    session.close()
+        session.add(new_log)
+        await session.commit()
+        print("✅ [Async] sales_log 테이블에 데이터 저장 완료")
+    except Exception as e:
+        await session.rollback()
+        print(f"❌ DB 저장 중 오류 발생: {e}")
+    finally:
+        await session.close()
 
-# 9️⃣ 데이터 처리 흐름을 담당하는 함수
-def run(state:CallingState):
-    # 음성 텍스트 인식
-    state = transcribe(state)
-    
-    # 통화 내용 요약 및 요구사항 정리
-    state = summarize(state)
-    
-    # 요약에서 필드 추출
-    return extract_fields(state["summary"], state["full_text"])
+def run_call_summary_agent():
+    return asyncio.run(run_call_summary_agent_async())
 
+async def run_call_summary_agent_async():
+    # Ensure the session is created within the same event loop
+    async with AsyncSessionLocal() as session:
+        # 1. 초기 상태 설정
+        state = CallingState(
+            full_text="",
+            summary="",
+            messages=[]
+        )
+
+        # 2. 음성 텍스트 인식
+        state = transcribe(state)
+
+        # 3. 통화 내용 요약 및 요구사항 정리
+        state = summarize(state)
+
+        # 4. 요약에서 필드 추출 (이후 상태는 dict)
+        extracted_fields = extract_fields(state["summary"], state["full_text"])
+
+        # 5. 비동기 DB 저장
+        await save_to_mariadb_async(extracted_fields, session)
+
+    return extracted_fields  # 필요하면 결과 리턴
+
+if __name__ == "__main__":
+    # Use asyncio.run here to start the event loop
+    extracted_fields = asyncio.run(run_call_summary_agent_async())
+    print(extracted_fields)

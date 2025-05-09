@@ -1,22 +1,25 @@
-import os
-import time
-import json
-import datetime
 from typing import TypedDict, Optional
-from langchain_openai import ChatOpenAI
-from langchain_community.vectorstores import Chroma
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph
+from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+import mysql.connector
+from langchain_community.vectorstores import Chroma
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings
+from docx import Document
+import pandas as pd
+import os
 from transformers import AutoTokenizer, AutoModel
 import torch
-from docx import Document
+import json
+from decimal import Decimal
+import sys
+import time
 from sqlalchemy import text
 import asyncio
+
 from db import AsyncSessionLocal
-from sqlalchemy.orm import aliased
-from decimal import Decimal
 
 # --- 🔎 상태 정의 ---
 class ProposalState(TypedDict, total=False):
@@ -64,75 +67,82 @@ embedding_function = BERTSentenceEmbedding()
 vectorstore = Chroma(
     collection_name="campaign_media_chroma_hf",
     embedding_function=embedding_function,
-    persist_directory="./chroma_db2"
+    persist_directory="../chroma_db2"
 )
 
-print("기존 ChromaDB 로드 완료!")
+print("기존 ChromaDB 로드 완료!", file=sys.stderr)
 
-# 비동기 DB 쿼리 함수
-async def db_query_tool_async(query: str, params: dict = None):
+async def db_query_tool_async(query: str, params: tuple = None):
     async with AsyncSessionLocal() as session:
-        async with session.begin():
-            result = await session.execute(text(query), params=params)
-            return result.fetchall()
+        try:
+            async with session.begin():
+                stmt = text(query)
+                result = await session.execute(stmt, params or ())
+                return [dict(row._mapping) for row in result.fetchall()]
+        except Exception as e:
+            return []
 
-# 웹 검색 도구
 def web_search_tool(query: str) -> str:
     return f"[WEB SEARCH RESULT for: {query}]"
 
-# Chroma DB 검색 도구
 def vectordb_search_tool(query: str, vectorstore, top_k: int = 3) -> str:
     results = vectorstore.similarity_search(query, k=top_k)
-    return "\n\n---\n\n".join([
-        f"- {doc.page_content.strip()} \n[이미지 보기]({doc.metadata.get('execution_image_url', '[이미지 없음]')})"
-        for doc in results
-    ])
+    combined_results = []
+    for doc in results:
+        content = doc.page_content
+        content_lines = [f"- {line.strip()}" for line in content.split(",")]
+        content_formatted = "\n".join(content_lines)
+        image_url = doc.metadata.get("execution_image_url", "")
+        if image_url.startswith("/images/"):
+            image_url = "../" + image_url.lstrip("/")
+        elif image_url == "":
+            image_url = "[이미지 없음]"
+        content_with_image = f"{content_formatted}\n[이미지 보기]({image_url})"
+        combined_results.append(content_with_image)
+    return "\n\n---\n\n".join(combined_results)
 
-# 브랜드와 판매 기록을 비동기적으로 조회하는 함수
-async def query_brand_and_sales_logs(brand_name: str):
-    # 수정된 쿼리: SQLAlchemy에서 파라미터 바인딩을 제대로 처리하도록 수정
-    brand_info = await db_query_tool_async(
-        "SELECT * FROM brands WHERE brand_name = :brand_name", 
-        {"brand_name": brand_name}
+async def query_brand_and_sales_logs(brand_name: str) -> tuple[dict, Optional[dict]]:
+    brand_info_list = await db_query_tool_async("SELECT * FROM brand WHERE brand_name = %s", (brand_name,))
+    if not brand_info_list:
+        return {}, None
+
+    brand_info = brand_info_list[0]
+    brand_id = brand_info["brand_id"]
+    sales_logs = await db_query_tool_async(
+        "SELECT * FROM sales_log WHERE brand_id = %s ORDER BY contact_time DESC LIMIT 1", (brand_id,)
     )
+    return brand_info, sales_logs[0] if sales_logs else None
 
-    if not brand_info:
-        return None, None
-
-    brand_id = brand_info[0][0]  # 브랜드 ID 추출
-    latest_sales_log = await db_query_tool_async(
-        "SELECT * FROM sales_logs WHERE brand_id = :brand_id ORDER BY contact_time DESC LIMIT 1", 
-        {"brand_id": brand_id}
-    )
-
-    return brand_info[0], latest_sales_log[0] if latest_sales_log else None
-
-# 브랜드 및 요구 사항 분석
 async def analyze_brand_and_needs(state: ProposalState):
     brand_name = state["brand_name"]
     brand_info, latest_sales_log = await query_brand_and_sales_logs(brand_name)
     if not brand_info:
         raise ValueError(f"브랜드 '{brand_name}' 정보를 찾을 수 없습니다.")
 
-    client_needs = latest_sales_log[11] if latest_sales_log else "최근 고객 요구사항 정보 없음"
-    recent_issues = brand_info[10] or "브랜드 이슈 정보 없음"
-    sales_status = brand_info[6] or "상태 정보 없음"
+    client_needs = latest_sales_log["client_needs_summary"] if latest_sales_log else "최근 고객 요구사항 정보 없음"
+    recent_issues = brand_info.get("recent_brand_issues") or "브랜드 이슈 정보 없음"
+    sales_status = brand_info.get("sales_status") or "상태 정보 없음"
 
-    return {**state, "brand_info": brand_info, "client_needs": client_needs, "recent_issues": recent_issues, "sales_status": sales_status}
+    return {
+        **state,
+        "brand_info": brand_info,
+        "client_needs": client_needs,
+        "recent_issues": recent_issues,
+        "sales_status": sales_status
+    }
 
-# 유사한 캠페인 사례 검색
-async def retrieve_previous_campaigns(state: ProposalState):
+def retrieve_previous_campaigns(state: ProposalState):
     client_needs = state.get("client_needs") or "옥외 광고 집행 사례"
     similar_cases = vectordb_search_tool(client_needs, vectorstore)
     return {**state, "previous_campaigns": similar_cases}
 
-# 매체 추천
 async def recommend_media(state: ProposalState):
     client_needs = state.get("client_needs") or ""
-    db_results = await db_query_tool_async("SELECT * FROM medias WHERE quantity > 0;")
+    db_results = await db_query_tool_async("SELECT * FROM media WHERE quantity > 0;")
     if not db_results:
         raise ValueError("사용 가능한 매체 정보가 없습니다.")
-    
+    media_info = db_results
+
     media_json = json.dumps(db_results, ensure_ascii=False, default=lambda o: float(o) if isinstance(o, Decimal) else str(o))
     prompt = f"""
         당신은 옥외 광고 전문 대행사의 전략 기획자입니다.
@@ -144,24 +154,33 @@ async def recommend_media(state: ProposalState):
         다음은 사용 가능한 매체 리스트입니다:
         {media_json}
     """
-    recommendation = llm.invoke(prompt)
-    return {**state, "recommended_media": recommendation.content, "media_info": db_results}
+    recommendation = await llm.invoke(prompt)
+    recommendation_text = recommendation.content
 
-# 제안서 생성
-async def generate_proposal(state: ProposalState):
+    return {**state, "recommended_media": recommendation_text, "media_info": media_info}
+
+def generate_proposal(state: ProposalState):
+    import datetime
+    import re
     doc = Document()
     doc.add_heading(f"{state['brand_name']} 옥외 광고 제안서", level=1)
 
     doc.add_heading("1. 고객사 정보", level=2)
-    for key, value in state["brand_info"].items():
-        doc.add_paragraph(f"- {key}: {value}")
+    brand_info = state["brand_info"]
+    if isinstance(brand_info, dict):
+        for key, value in brand_info.items():
+            doc.add_paragraph(f"- {key}: {value}")
 
     doc.add_heading("2. 캠페인 목표", level=2)
-    for item in state["client_needs"].split(","):
-        doc.add_paragraph(f"- {item.strip()}")
+    client_needs = state["client_needs"]
+    for item in re.split(r",|·|•", client_needs):
+        if item.strip():
+            doc.add_paragraph(f"- {item.strip()}")
 
     doc.add_heading("3. 유사 집행 사례", level=2)
-    for idx, case in enumerate(state["previous_campaigns"].split("\n\n---\n\n"), 1):
+    previous_campaigns = state["previous_campaigns"]
+    cases = previous_campaigns.split("\n\n---\n\n")
+    for idx, case in enumerate(cases, 1):
         doc.add_paragraph(f"- 사례 {idx}: {case}")
 
     doc.add_heading("4. 추천매체 및 집행계획", level=2)
@@ -175,36 +194,52 @@ async def generate_proposal(state: ProposalState):
 
     위 정보를 바탕으로 제안서의 마무리 결론 부분을 작성하세요.
     """)
-    conclusion = prompt | llm.invoke(state).content
+    chain = prompt | llm
+    conclusion = chain.invoke(state).content
     doc.add_paragraph(conclusion)
 
-    file_name = f"{state['brand_name']}_제안서_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+    now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_name = f"{state['brand_name']}_제안서_{now}.docx"
     doc.save(file_name)
+
     return {**state, "proposal_text": conclusion, "proposal_file_path": file_name}
 
-# 그래프 구성
+# --- 🔗 그래프 구성 ---
 graph = StateGraph(ProposalState)
 graph.add_node("AnalyzeBrandAndNeeds", analyze_brand_and_needs)
 graph.add_node("RecommendMedia", recommend_media)
 graph.add_node("RetrievePreviousCampaigns", retrieve_previous_campaigns)
 graph.add_node("GenerateProposal", generate_proposal)
+
 graph.set_entry_point("AnalyzeBrandAndNeeds")
 graph.add_edge("AnalyzeBrandAndNeeds", "RetrievePreviousCampaigns")
 graph.add_edge("RetrievePreviousCampaigns", "RecommendMedia")
 graph.add_edge("RecommendMedia", "GenerateProposal")
 graph.set_finish_point("GenerateProposal")
+
 proposal_graph = graph.compile()
 
-# --- 🚀 실행 ---
 if __name__ == "__main__":
     import argparse
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("--brand", required=True, help="브랜드명 (예: 유니클로코리아)")
+    parser.add_argument("--brand", required=True)
     args = parser.parse_args()
 
-    initial_state = {"brand_name": args.brand}
-    final_state = asyncio.run(proposal_graph.ainvoke(initial_state))
+    try:
+        initial_state = {"brand_name": args.brand}
+        final_state = asyncio.run(proposal_graph.ainvoke(initial_state))
+        
+        print("✅ 제안서 생성 완료", file=sys.stderr)
+        print(final_state["proposal_text"], file=sys.stderr)
+        print(f"📄 저장 경로: {final_state['proposal_file_path']}", file=sys.stderr)
 
-    print("최종 제안서:", final_state["proposal_text"])
-    print(f"제안서 Word 파일 경로: {final_state['proposal_file_path']}")
+        result = {
+            "success": True,
+            "brand": args.brand,
+            "file_path": final_state["proposal_file_path"],
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        print(json.dumps(result))
+    except Exception as e:
+        result = {"success": False, "error": str(e)}
+        print(json.dumps(result))
