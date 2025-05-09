@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import subprocess
+import sys
 
 from run_company_media_agent import run_company_media_agent
 
@@ -82,12 +84,77 @@ if st.sidebar.button("🏢 기업 리스트 업데이트", use_container_width=T
 
 # 제안서 생성 함수 - 영업 단계 변경하지 않음
 def generate_proposal(idx):
-    if idx is not None:
-        # 실제로는 report_agent.py와 email_agent.py를 호출
-        st.session_state.proposal_generated[idx] = True
-        st.session_state.email_script_generated[idx] = True
-        return True
-    return False
+    if idx is None or st.session_state.company_data is None or st.session_state.company_data.empty:
+        st.error("⚠️ 회사 정보가 없습니다.")
+        return False, "회사 정보 없음"
+
+    brand = st.session_state.company_data.loc[idx, 'brand_list']
+    issue = st.session_state.company_data.loc[idx, 'recent_brand_issues']
+
+    st.warning(f"📣 제안서 생성 시작: {brand}")
+
+    try:
+        with st.spinner(f"{brand} 제안서 생성 중..."):
+            cmd = [
+                sys.executable,
+                "report_agent_wrapper.py",
+                f"--brand={brand}",
+                f"--issue={issue}"
+            ]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=900
+            )
+
+            with st.expander("제안서 생성 로그", expanded=False):
+                st.subheader("표준 출력:")
+                st.code(result.stdout)
+                if result.stderr:
+                    st.subheader("오류 출력:")
+                    st.code(result.stderr)
+
+            if result.returncode == 0:
+                json_result = None
+                for line in result.stdout.split('\n'):
+                    if line.strip().startswith('{') and line.strip().endswith('}'):
+                        try:
+                            json_result = json.loads(line.strip())
+                            break
+                        except json.JSONDecodeError:
+                            continue
+
+                if json_result and json_result.get("success"):
+                    st.session_state.proposal_generated[idx] = True
+                    st.session_state.email_script_generated[idx] = True
+
+                    file_path = json_result.get("file_path", "")
+                    if file_path and os.path.exists(file_path):
+                        st.success(f"✅ 제안서가 생성되었습니다: {file_path}")
+                        with open(file_path, "rb") as file:
+                            st.download_button(
+                                label="📄 제안서 다운로드",
+                                data=file,
+                                file_name=os.path.basename(file_path),
+                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            )
+                    return True, "성공"
+                else:
+                    st.error("❌ JSON 결과가 없거나 실패했습니다.")
+                    return False, "JSON 결과 없음"
+            else:
+                st.error(f"❌ wrapper 실행 실패: 종료 코드 {result.returncode}")
+                return False, f"실패: 종료 코드 {result.returncode}"
+
+    except subprocess.TimeoutExpired:
+        st.error("⏰ 제안서 생성 시간이 초과되었습니다.")
+        return False, "시간 초과"
+
+    except Exception as e:
+        st.error(f"❌ 예외 발생: {e}")
+        return False, str(e)
 
 # 전화 걸기 다이얼로그 함수
 @st.dialog("전화 스크립트")

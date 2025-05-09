@@ -235,20 +235,27 @@ graph.set_finish_point("GenerateProposal")
 proposal_graph = graph.compile()
 
 # --- 🚀 실행 ---
-initial_state = {
-    "brand_name": "유니클로코리아"
-}
+if __name__ == "__main__":
+    import argparse
 
-final_state = proposal_graph.invoke(initial_state)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--brand", required=True, help="브랜드명 (예: 유니클로코리아)")
+    args = parser.parse_args()
 
-print("최종 제안서:\n", file=sys.stderr)
-print(final_state["proposal_text"], file=sys.stderr)
-print(f"제안서 Word 파일 경로: {final_state['proposal_file_path']}", file=sys.stderr)
+    initial_state = {
+        "brand_name": args.brand
+    }
 
-result = {
-    "success": True,
-    "brand": initial_state["brand_name"],
-    "file_path": final_state["proposal_file_path"],
-    "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
-}
-print(json.dumps(result))
+    final_state = proposal_graph.invoke(initial_state)
+
+    print("최종 제안서:\n", file=sys.stderr)
+    print(final_state["proposal_text"], file=sys.stderr)
+    print(f"제안서 Word 파일 경로: {final_state['proposal_file_path']}", file=sys.stderr)
+
+    result = {
+        "success": True,
+        "brand": initial_state["brand_name"],
+        "file_path": final_state["proposal_file_path"],
+        "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    print(json.dumps(result))
