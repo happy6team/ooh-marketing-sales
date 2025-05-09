@@ -159,27 +159,66 @@ def generate_proposal(idx):
 # 전화 걸기 다이얼로그 함수
 @st.dialog("전화 스크립트")
 def show_call_dialog(idx):
-    """
-    전화 스크립트 다이얼로그를 표시합니다.
-    """
     brand_name = working_df.loc[idx, 'brand_list']
     call_script = working_df.loc[idx, 'sales_call_script']
-    
+
     st.markdown(f"### {brand_name} 담당자와의 통화 스크립트")
     st.markdown(f"{call_script}")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        # 다이얼로그 내의 버튼에 고유한 키 할당
-        if st.button("취소", key=f"dialog_cancel_{idx}", use_container_width=True):
+
+    # ✅ 상태 초기화
+    ack_key = f"call_done_ack_{idx}"
+    stdout_key = f"prototype_stdout_{idx}"
+    stderr_key = f"prototype_stderr_{idx}"
+
+    if ack_key not in st.session_state:
+        st.session_state[ack_key] = False
+        st.session_state[stdout_key] = ""
+        st.session_state[stderr_key] = ""
+
+    if not st.session_state[ack_key]:
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("취소", key=f"dialog_cancel_{idx}", use_container_width=True):
+                st.rerun()
+        with col2:
+            if st.button("통화 완료", key=f"dialog_complete_{idx}", type="primary", use_container_width=True):
+                st.session_state.call_completed[idx] = True
+                st.session_state.company_data.loc[idx, 'sales_status'] = "접촉 완료"
+
+                # ✅ prototype2.py 실행 중 로딩 표시
+                with st.spinner("📞 통화 요약 중입니다..."):
+                    try:
+                        result = subprocess.run(
+                            [sys.executable, "call_summary_agent.py", f"--brand={brand_name}"],
+                            capture_output=True,
+                            text=True,
+                            timeout=300
+                        )
+                        st.session_state[stdout_key] = result.stdout
+                        st.session_state[stderr_key] = result.stderr
+                    except Exception as e:
+                        st.session_state[stderr_key] = f"에러: {e}"
+
+                # ✅ 완료 상태로 전환
+                st.session_state[ack_key] = True
+                st.rerun()
+
+    else:
+        st.success("✅ 통화 요약이 완료되었습니다. 결과를 확인 후 '확인'을 눌러주세요.")
+
+        with st.expander("📞 call_summary_agent 실행 로그", expanded=False):
+            st.subheader("stdout")
+            st.code(st.session_state[stdout_key])
+            if st.session_state[stderr_key]:
+                st.subheader("stderr")
+                st.code(st.session_state[stderr_key])
+
+        if st.button("확인", key=f"call_done_confirm_{idx}", type="primary"):
+            del st.session_state[ack_key]
+            del st.session_state[stdout_key]
+            del st.session_state[stderr_key]
             st.rerun()
-    with col2:
-        # 다이얼로그 내의 버튼에 고유한 키 할당
-        if st.button("통화 완료", key=f"dialog_complete_{idx}", type="primary", use_container_width=True):
-            st.session_state.call_completed[idx] = True
-            # 통화 완료 시 영업 단계를 "접촉 완료"로 업데이트
-            st.session_state.company_data.loc[idx, 'sales_status'] = "접촉 완료"
-            st.rerun()
+
 
 # 이메일 다이얼로그 함수
 @st.dialog("이메일 스크립트")
