@@ -7,7 +7,8 @@ from datetime import datetime
 
 import ast
 import re
-
+from dotenv import load_dotenv
+load_dotenv()
 
 search_tool = TavilySearch()
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
