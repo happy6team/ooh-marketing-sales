@@ -96,12 +96,12 @@ def generate_proposal(idx):
     brand = st.session_state.company_data.loc[idx, 'brand_list']
     issue = st.session_state.company_data.loc[idx, 'recent_brand_issues']
 
-    st.warning(f"📣 제안서 생성 시작: {brand}")
+    # st.warning(f"📣 제안서 생성 시작: {brand}")
     # st.session_state.proposal_generated[idx] = True
     # st.session_state.email_script_generated[idx] = True
 
     try:
-        with st.spinner(f"{brand} 제안서 생성 중..."):
+        with st.spinner(f"생성 중..."):
             cmd = [
                 sys.executable,
                 "report_agent_wrapper.py",
@@ -198,7 +198,7 @@ def show_call_dialog(idx):
             
             st.rerun()
 
-# 통화 요약 다이얼로그 함수 (신규 추가)
+# 통화 요약 다이얼로그 함수 수정
 @st.dialog("통화 요약")
 def show_call_summary_dialog(idx):
     """
@@ -229,9 +229,19 @@ def show_call_summary_dialog(idx):
         if st.button("확인", key=f"summary_ok_{idx}", use_container_width=True):
             st.rerun()
     else:
-        st.error("통화 요약 정보가 없습니다. 먼저 통화 분석을 진행해주세요.")
-        if st.button("닫기", key=f"summary_close_{idx}", use_container_width=True):
-            st.rerun()
+        st.error("통화 요약 정보가 없습니다. 통화 요약을 진행하시겠습니까?")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("취소", key=f"summary_cancel_{idx}", use_container_width=True):
+                st.rerun()
+        with col2:
+            if st.button("통화 요약 실행", key=f"summary_run_{idx}", type="primary", use_container_width=True):
+                # 통화 요약 실행
+                with st.spinner("통화 내용을 분석 중입니다..."):
+                    call_data = process_call_summary(idx)
+                    if call_data:
+                        st.success(f"{brand_name} 통화 내용이 성공적으로 분석되었습니다.")
+                st.rerun()
 
 # 통화 요약 처리 함수 
 def process_call_summary(idx):
@@ -458,9 +468,20 @@ if st.session_state.company_data is not None:
                                 # 여기를 수정: summary_button_type 제거하고 체크 표시 추가
                                 summary_button_label = "✓ 통화 요약" if has_summary else "통화 요약"
                                 if st.button(summary_button_label, key=f"summary_btn_{i}"):
-                                    show_call_summary_dialog(i)
+                                    if has_summary:
+                                        # 이미 요약이 있으면 다이얼로그 표시
+                                        show_call_summary_dialog(i)
+                                    else:
+                                        # 요약이 없으면 생성 진행
+                                        with st.spinner("통화 내용을 분석 중입니다..."):
+                                            call_data = process_call_summary(i)
+                                            if call_data:
+                                                st.success(f"{working_df.loc[i, 'brand_list']} 통화 내용이 성공적으로 분석되었습니다.")
+                                                st.rerun()
                             else:
                                 st.button("통화 요약", key=f"summary_disabled_{i}", disabled=True)
+
+
                         
                         # 제안서 생성 버튼 - 통화 완료 후에만 활성화
                         with b3:
