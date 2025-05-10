@@ -190,8 +190,12 @@ def show_call_dialog(idx):
             st.session_state.call_completed[idx] = True
             st.session_state.company_data.loc[idx, 'sales_status'] = "접촉 완료"
             
-            # 비동기 처리 플래그만 설정 (실제 처리는 따로 수행)
-            st.session_state[f"processing_call_{idx}"] = True
+            # 바로 통화 요약 처리 시작 (비동기 방식으로 변경)
+            with st.spinner("통화 내용을 분석 중입니다..."):
+                call_data = process_call_summary(idx)
+                if call_data:
+                    st.success(f"{brand_name} 통화 내용이 성공적으로 분석되었습니다.")
+            
             st.rerun()
 
 # 통화 요약 다이얼로그 함수 (신규 추가)
@@ -229,39 +233,34 @@ def show_call_summary_dialog(idx):
         if st.button("닫기", key=f"summary_close_{idx}", use_container_width=True):
             st.rerun()
 
-# 통화 요약 처리 함수 (스피너 유지)
+# 통화 요약 처리 함수 
 def process_call_summary(idx):
     """
     통화 내용을 처리하고 요약하는 함수
     """
     if idx is not None and st.session_state.company_data is not None:
-        # 스피너 유지 (실제 처리가 이루어지는 부분)
-        with st.spinner("통화 내용을 분석 중입니다..."):
-            brand_name = st.session_state.company_data.loc[idx, 'brand_list']
-            
-            # 담당자 정보 가져오기
-            manager_name = st.session_state.company_data.loc[idx, 'manager_name']
-            if pd.isna(manager_name) or not manager_name:
-                manager_name = "담당자"  # 기본값
-            
-            manager_email = st.session_state.company_data.loc[idx, 'manager_email']
-            if pd.isna(manager_email):
-                manager_email = None
-            
-            # call_summary_agent 호출하여 통화 내용 분석
-            call_data = call_summary_agent(brand_name, manager_name, manager_email)
-            
-            # 세션 상태에 저장
-            st.session_state.call_summary[idx] = call_data
-            
-            # 영업 상태 업데이트
-            if 'sales_status' in call_data and call_data['sales_status']:
-                st.session_state.company_data.loc[idx, 'sales_status'] = "접촉 완료"
-            
-            # 통화 완료 표시
-            st.session_state.call_completed[idx] = True
-            
-            return call_data
+        brand_name = st.session_state.company_data.loc[idx, 'brand_list']
+        
+        # 담당자 정보 가져오기
+        manager_name = st.session_state.company_data.loc[idx, 'manager_name']
+        if pd.isna(manager_name) or not manager_name:
+            manager_name = "담당자"  # 기본값
+        
+        manager_email = st.session_state.company_data.loc[idx, 'manager_email']
+        if pd.isna(manager_email):
+            manager_email = None
+        
+        # call_summary_agent 호출하여 통화 내용 분석
+        call_data = call_summary_agent(brand_name, manager_name, manager_email)
+        
+        # 세션 상태에 저장
+        st.session_state.call_summary[idx] = call_data
+        
+        # 영업 상태 업데이트
+        if 'sales_status' in call_data and call_data['sales_status']:
+            st.session_state.company_data.loc[idx, 'sales_status'] = "접촉 완료"
+        
+        return call_data
     return None
 
 
@@ -377,14 +376,14 @@ if st.session_state.company_data is not None:
 
                 # 확장된 회사 정보 표시
                 if st.session_state.expanded_company == i:
-                    # 비동기 처리 확인 및 처리 (스피너 없음)
-                    processing_key = f"processing_call_{i}"
-                    if processing_key in st.session_state and st.session_state[processing_key]:
-                        # 스피너 없이 통화 요약 처리 함수 호출 (함수 내부에 스피너 있음)
-                        process_call_summary(i)
-                        # 처리 완료 후 플래그 제거
-                        st.session_state.pop(processing_key, None)
-                        st.rerun()
+                    # # 비동기 처리 확인 및 처리 (스피너 없음)
+                    # processing_key = f"processing_call_{i}"
+                    # if processing_key in st.session_state and st.session_state[processing_key]:
+                    #     # 스피너 없이 통화 요약 처리 함수 호출 (함수 내부에 스피너 있음)
+                    #     process_call_summary(i)
+                    #     # 처리 완료 후 플래그 제거
+                    #     st.session_state.pop(processing_key, None)
+                    #     st.rerun()
                     
                     st.info(f"""
                         **카테고리:** {working_df.loc[i, "category"]}  
