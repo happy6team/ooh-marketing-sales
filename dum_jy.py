@@ -64,7 +64,7 @@ date_range = st.sidebar.date_input(
 )
 
 # 사이드바에 업데이트 버튼 추가
-if st.sidebar.button("🏢 기업 리스트 업데이트", use_container_width=True):
+if st.sidebar.button("🏢 브랜드 리스트 업데이트", use_container_width=True):
     # 실제 에이전트 실행을 통해 데이터 생성
     with st.spinner("브랜드 리스트업 중... 잠시만 기다려주세요 🙏"):
         # df = run_company_media_agent(selected_카테고리, date_range, selected_담당자)
@@ -85,7 +85,7 @@ if st.sidebar.button("🏢 기업 리스트 업데이트", use_container_width=T
             df["sales_status"] = "미접촉"
         
         st.session_state.company_data = df.copy()
-        st.sidebar.success("기업 리스트가 성공적으로 업데이트되었습니다!")
+        st.sidebar.success("브랜드 리스트가 성공적으로 업데이트되었습니다!")
 
 # 제안서 생성 함수 - report_agent 연동
 def generate_proposal(idx):
@@ -336,13 +336,13 @@ def show_email_dialog(idx):
 if st.session_state.company_data is not None:
         working_df = st.session_state.company_data
         
-        # 기업 리스트
-        st.subheader("기업 리스트")
+        # 브랜드 리스트
+        st.subheader("브랜드 리스트")
         
         with st.container():
             col1, col2, col3, col4 = st.columns([2, 6, 2, 1])
             with col1:
-                st.write("기업 명")
+                st.write("브랜드 명")
             with col2:
                 st.write("최신 이슈")
             with col3:
@@ -431,6 +431,7 @@ if st.session_state.company_data is not None:
                                 on_change=update_sales_status,
                                 args=(i,)
                             )
+                            
                     
                     # 버튼들을 오른쪽 하단에 한 줄로 배치
                     _, _, button_col = st.columns([1, 1, 2])
@@ -533,4 +534,4 @@ if st.session_state.company_data is not None:
             st.sidebar.success(f"✅ {item['brand']} {item['status']}")
 else:
     # 데이터가 없을 때 메시지 표시
-    st.info("👈 기업 리스트를 보려면 왼쪽 사이드바에서 필터 설정 후 '기업 리스트 업데이트' 버튼을 클릭하세요.")
+    st.info("👈 브랜드 리스트를 보려면 왼쪽 사이드바에서 필터 설정 후 '브랜드 리스트 업데이트' 버튼을 클릭하세요.")
